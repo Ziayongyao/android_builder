@@ -61,7 +61,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        apk: ${{ fromJSON(needs.build.outputs.apk_paths) }}
+        apk: ${{ fromJSON(needs.build.outputs.apk_paths || '[]') }}
     steps:
       - name: Download Artifact
         uses: actions/download-artifact@v4
