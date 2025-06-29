@@ -8,25 +8,47 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: Checkout the code
-        uses: actions/checkout@v2
-      - name: Set up JDK
-        uses: actions/setup-java@v1
+        uses: actions/checkout@v3  # 更新到最新版本
         with:
-          java-version: 1.8
-      - id: get-project
-        name: Get project name
-        run: echo "::set-output name=PROJECT::$(cat project-to-build)"
+          fetch-depth: 1  # 简化克隆深度设置
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v3  # 更新到最新版本
+        with:
+          distribution: 'temurin'  # 明确指定JDK发行版
+          java-version: 17  # 升级到最新稳定版JDK17
+      
+      - name: Get project name
+        id: get-project
+        run: |
+          PROJECT=$(cat project-to-build)
+          echo "project=$PROJECT" >> $GITHUB_OUTPUT  # 使用新式输出方式
+      
       - name: Clone project
-        run: git clone --depth=1 ${{ steps.get-project.outputs.PROJECT }} project
+        run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
+      
+      - name: Setup Gradle cache
+        uses: actions/cache@v3  # 新增缓存步骤
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle-
+      
       - name: Build the app
         working-directory: ./project
         run: |
-          if [ ! -f "gradlew" ]; then gradle wrapper; fi
-          chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew --no-daemon assembleDebug --stacktrace --parallel  # 添加优化参数
+        
+      - name: Verify APK Signing
+        working-directory: ./project
+        run: |
+          # 验证APK是否包含默认debug签名
+          unzip -l app/build/outputs/apk/debug/*.apk | grep -i 'META-INF'
+          # 检查debug.keystore是否存在
+          ls -la ~/.android/debug.keystore
+      
       - name: Upload APK
-        uses: actions/upload-artifact@v2
+        uses: actions/upload-artifact@v3  # 更新版本
         with:
           name: my-build-apk
-          path: ./**/*.apk
-
+          path: app/build/outputs/apk/debug/*.apk  # 精确指定路径
