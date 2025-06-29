@@ -42,8 +42,13 @@ jobs:
       - name: Verify APK Signing
         working-directory: ./project
         run: |
-          # 验证APK是否包含默认debug签名
-          unzip -l app/build/outputs/apk/debug/*.apk | grep -i 'META-INF'
+          # 增加目录内容检查
+          echo "Listing build output directory:"
+          ls -la app/build/outputs/apk/debug/
+          
+          # 验证APK是否包含默认debug签名（使用精确匹配）
+          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -i 'META-INF'
+          
           # 检查debug.keystore是否存在
           ls -la ~/.android/debug.keystore
       
