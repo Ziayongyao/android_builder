@@ -50,10 +50,6 @@ jobs:
       - name: Verify APK Signing
         working-directory: ./project
         run: |
-          # 增加目录内容检查（修正路径）
-          echo "Listing build output directory:"
-          ls -la app/build/outputs/apk/debug/
-          
           # 验证APK是否包含默认debug签名（使用动态路径）
           unzip -l "$APK_PATH" | grep -i 'META-INF'
           
