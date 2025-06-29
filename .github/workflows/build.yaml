@@ -33,14 +33,8 @@ jobs:
         working-directory: ./project
         run: |
           ./gradlew --no-daemon assembleDebug --stacktrace
-      - name: Extract APK Path
-        working-directory: ./project
-        run: |
-          APK_PATH=$(find . -name "*.apk" | head -n 1)
-          echo "APK path is: $APK_PATH"
-          echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
           name: my-build-apk
-          path: ${{ env.APK_PATH }}
+          path: ./**/*.apk
