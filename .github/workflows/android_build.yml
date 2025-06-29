@@ -46,7 +46,7 @@ jobs:
           if [ ${#APK_FILES[@]} -eq 0 ]; then
             echo "apk_paths=" >> $GITHUB_OUTPUT
           else
-            echo "apk_paths=$(printf "%s\n" "${APK_FILES[@]}" )" >> $GITHUB_OUTPUT
+            echo "apk_paths=$(printf '%s\n' "${APK_FILES[@]}")" >> $GITHUB_OUTPUT
           fi
 
   upload_apk:
@@ -54,7 +54,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        apk: ${{ split(needs.build.outputs.apk_paths, '\n') }}
+        apk: ${{ fromJSON(needs.build.outputs.apk_paths || '[""]') }}
     steps:
       - name: Download Artifact
         uses: actions/download-artifact@v4
