@@ -42,18 +42,19 @@ jobs:
       - name: Verify APK Signing
         working-directory: ./project
         run: |
-          # 增加目录内容检查
+          # 增加目录内容检查（修正路径）
           echo "Listing build output directory:"
-          ls -la app/build/outputs/apk/debug/
+          ls -la project/app/build/outputs/apk/debug/
           
           # 验证APK是否包含默认debug签名（使用精确匹配）
-          unzip -l app/build/outputs/apk/debug/app-debug.apk | grep -i 'META-INF'
+          unzip -l project/app/build/outputs/apk/debug/app-debug.apk | grep -i 'META-INF'
           
           # 检查debug.keystore是否存在
           ls -la ~/.android/debug.keystore
       
       - name: Upload APK
-        uses: actions/upload-artifact@v4  # 更新到非弃用版本v4
+        uses: actions/upload-artifact@v4
         with:
           name: my-build-apk
-          path: app/build/outputs/apk/debug/*.apk
+          # 修正APK文件路径并保持精确匹配
+          path: project/app/build/outputs/apk/debug/app-debug.apk
