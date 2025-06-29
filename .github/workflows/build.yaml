@@ -39,15 +39,22 @@ jobs:
         run: |
           ./gradlew --no-daemon assembleDebug --stacktrace --parallel  # 添加优化参数
         
+      - name: Extract APK Path
+        working-directory: ./project
+        run: |
+          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+          echo "APK path is: $APK_PATH"
+          echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
+        
       - name: Verify APK Signing
         working-directory: ./project
         run: |
           # 增加目录内容检查（修正路径）
           echo "Listing build output directory:"
-          ls -la project/app/build/outputs/apk/debug/
+          ls -la app/build/outputs/apk/debug/
           
-          # 验证APK是否包含默认debug签名（使用精确匹配）
-          unzip -l project/app/build/outputs/apk/debug/app-debug.apk | grep -i 'META-INF'
+          # 验证APK是否包含默认debug签名（使用动态路径）
+          unzip -l "$APK_PATH" | grep -i 'META-INF'
           
           # 检查debug.keystore是否存在
           ls -la ~/.android/debug.keystore
@@ -56,5 +63,5 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: my-build-apk
-          # 修正APK文件路径并保持精确匹配
-          path: project/app/build/outputs/apk/debug/app-debug.apk
+          # 使用动态提取的APK路径
+          path: ${{ env.APK_PATH }}
