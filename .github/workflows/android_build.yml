@@ -45,9 +45,14 @@ jobs:
         run: |
           # 使用 find 的 -print0 配合 xargs 处理带空格路径
           APK_PATHS=$(find . -name "*.apk" -print0 | xargs -0)
-          # 确保路径按换行分割并正确转义
-          echo "$APK_PATHS" | jq -R -s -c 'split("\u0000")[:-1] | map(select(length > 0)) | map(gsub("\\$"; "$$"))' > apk_paths.json
-          echo "apk_paths=$(cat apk_paths.json)" >> $GITHUB_OUTPUT
+          # 新增空值保护：当未找到APK时生成空数组
+          if [ -z "$APK_PATHS" ]; then
+            echo "apk_paths=[]" >> $GITHUB_OUTPUT
+          else
+            # 确保路径按换行分割并正确转义
+            echo "$APK_PATHS" | jq -R -s -c 'split("\u0000")[:-1] | map(select(length > 0)) | map(gsub("\\$"; "$$"))' > apk_paths.json
+            echo "apk_paths=$(cat apk_paths.json)" >> $GITHUB_OUTPUT
+          fi
           # 只保留第一个APK路径用于兼容旧流程
           echo "APK_PATH=$(echo "$APK_PATHS" | head -n1)" >> $GITHUB_ENV
 
