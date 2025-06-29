@@ -1,0 +1,67 @@
+name: android_build
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout the code
+        uses: actions/checkout@v3  # 更新到最新版本
+        with:
+          fetch-depth: 1  # 简化克隆深度设置
+      
+      - name: Set up JDK
+        uses: actions/setup-java@v3  # 更新到最新版本
+        with:
+          distribution: 'temurin'  # 明确指定JDK发行版
+          java-version: 17  # 升级到最新稳定版JDK17
+      
+      - name: Get project name
+        id: get-project
+        run: |
+          PROJECT=$(cat project-to-build)
+          echo "project=$PROJECT" >> $GITHUB_OUTPUT  # 使用新式输出方式
+      
+      - name: Clone project
+        run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
+      
+      - name: Setup Gradle cache
+        uses: actions/cache@v3  # 新增缓存步骤
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle-
+      
+      - name: Build the app
+        working-directory: ./project
+        run: |
+          ./gradlew --no-daemon assembleDebug --stacktrace
+        
+      - name: Extract APK Path
+        id: extract_apk
+        working-directory: ./project
+        run: |
+          APK_PATH=$(find . -name "*.apk")
+          echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
+          echo "apk_paths=$(echo "$APK_PATH" | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+
+  upload_apk:
+    needs: build
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        apk: ${{ fromJSON(needs.build.outputs.apk_paths) }}
+    steps:
+      - name: Download Artifact
+        uses: actions/download-artifact@v4
+        with:
+          path: project
+
+      - name: Upload APK
+        if: matrix.apk != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-build-apk-${{ matrix.apk }}
+          path: ${{ matrix.apk }}
