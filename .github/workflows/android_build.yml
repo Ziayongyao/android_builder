@@ -67,5 +67,5 @@ jobs:
         if: matrix.apk != ''
         uses: actions/upload-artifact@v4
         with:
-          name: my-build-apk-${{ replace(matrix.apk, '$', '$$') }}
-          path: ${{ replace(matrix.apk, '$', '$$') }}
+          name: my-build-apk-${{ matrix.apk }}
+          path: ${{ matrix.apk }}
