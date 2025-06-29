@@ -37,12 +37,13 @@ jobs:
       - name: Build the app
         working-directory: ./project
         run: |
-          ./gradlew --no-daemon assembleDebug --stacktrace --parallel  # 添加优化参数
+          ./gradlew --no-daemon assembleDebug --stacktrace
         
       - name: Extract APK Path
         working-directory: ./project
         run: |
-          APK_PATH=$(find app/build/outputs/apk/debug -name "*.apk" | head -n 1)
+          # 从工作目录根目录开始全局搜索APK文件
+          APK_PATH=$(find . -name "*.apk" | head -n 1)
           echo "APK path is: $APK_PATH"
           echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
         
