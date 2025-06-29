@@ -47,7 +47,10 @@ jobs:
           APK_PATHS=$(find . -name "*.apk" -print0 | xargs -0)
           # 新增空值保护：当未找到APK时生成空数组
           if [ -z "$APK_PATHS" ]; then
-            echo "apk_paths=[]" >> $GITHUB_OUTPUT
+            # 删除原空数组输出，改用单元素数组占位符
+            echo "apk_paths=[\"\"]" >> $GITHUB_OUTPUT
+            # 增加占位符确保矩阵非空，保留第一个元素兼容旧流程
+            echo "APK_PATH=" >> $GITHUB_ENV
           else
             # 直接生成JSON数组避免临时文件
             JSON_ARRAY=$(echo "$APK_PATHS" | jq -R -s -c 'split("\u0000")[:-1] | map(select(length > 0)) | map(gsub("\\$"; "$$"))')
