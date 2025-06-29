@@ -44,8 +44,11 @@ jobs:
         working-directory: ./project
         run: |
           APK_PATH=$(find . -name "*.apk")
-          echo "APK_PATH=$APK_PATH" >> $GITHUB_ENV
-          echo "apk_paths=$(echo "$APK_PATH" | jq -R -s -c 'split("\n")[:-1]')" >> $GITHUB_OUTPUT
+          # 使用环境文件方式替代直接写入GITHUB_ENV
+          echo "APK_PATH=$APK_PATH" > $GITHUB_ENV
+          # 使用临时文件处理JSON转换
+          echo "$APK_PATH" | jq -R -s -c 'split("\n")[:-1]' | tee apk_paths.json
+          echo "apk_paths=$(cat apk_paths.json)" >> $GITHUB_OUTPUT
 
   upload_apk:
     needs: build
