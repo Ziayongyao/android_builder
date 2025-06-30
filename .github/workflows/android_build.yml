@@ -1,7 +1,9 @@
-name: build
+name: android_build
 
 on:
   workflow_dispatch:
+  schedule:
+    - cron: '0 0/6 * * *'  # 每6小时自动触发一次
 
 jobs:
   build:
@@ -22,14 +24,29 @@ jobs:
           PROJECT=$(cat project-to-build)
           echo "project=$PROJECT" >> $GITHUB_OUTPUT
       - name: Clone project
-        run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
-      - name: Setup Gradle cache
-        uses: actions/cache@v3
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
-          restore-keys: ${{ runner.os }}-gradle-
+        run: git clone ${{ steps.get-project.outputs.project }} project
+        # 修改 fetch-depth 以支持提交历史比对
+
+      - name: Fetch remote HEAD
+        working-directory: ./project
+        run: git fetch origin main
+
+      - name: Check for new commits
+        working-directory: ./project
+        id: check_new_commits
+        run: |
+          LOCAL_HEAD=$(git rev-parse HEAD)
+          REMOTE_HEAD=$(git rev-parse origin/main)
+          if [ "$LOCAL_HEAD" = "$REMOTE_HEAD" ]; then
+            echo "No new commits found. Skipping build."
+            echo "SKIP_BUILD=true" >> $GITHUB_ENV
+          else
+            echo "New commits detected. Proceeding with build."
+            echo "SKIP_BUILD=false" >> $GITHUB_ENV
+          fi
+
       - name: Build the app
+        if: env.SKIP_BUILD == 'false'
         working-directory: ./project
         run: |
           ./gradlew --no-daemon assembleDebug --stacktrace
