@@ -45,9 +45,12 @@ jobs:
       - name: Upload First APK
         uses: actions/upload-artifact@v4
         with:
-          path: $APK1_PATH
+          path: ${{ env.APK1_PATH }}
+          # 显式验证文件存在性
+          if: ${{ env.APK1_PATH != null && env.APK1_PATH != '' }}
 
       - name: Upload Second APK
         uses: actions/upload-artifact@v4
         with:
-          path: $APK2_PATH
+          path: ${{ env.APK2_PATH }}
+          if: ${{ env.APK2_PATH != null && env.APK2_PATH != '' }}
