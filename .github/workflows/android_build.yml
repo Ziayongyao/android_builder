@@ -89,20 +89,19 @@ jobs:
         # 新增peter-evans/create-release@v3实现相同功能
       - name: Create GitHub Release
         if: ${{ !env.SKIP_BUILD }}
-        uses: peter-evans/github-release@v1  # 修改动作名称为peter-evans/github-release
+        uses: softprops/action-gh-release@v2
         with:
-          tag-name: ${{ steps.get-remote-hash.outputs.REMOTE_HASH }}
-          release-name: ${{ format('Build {0}', steps.get-remote-hash.outputs.REMOTE_HASH) }}
-          body-text: |
+          tag_name: ${{ steps.get-remote-hash.outputs.REMOTE_HASH }}
+          name: ${{ format('Build {0}', steps.get-remote-hash.outputs.REMOTE_HASH) }}
+          body: |
             ${{ format('自动构建发布 - 提交哈希: {0}', steps.get-remote-hash.outputs.REMOTE_HASH) }}
             
             提取自远程仓库的最新提交信息:
             $(git log -1 --pretty=%B ${{ steps.get-remote-hash.outputs.REMOTE_HASH }})
-          draft: false
-          prerelease: false
-          assets-path: |  # 参数名称调整为assets-path（注意复数形式）
+          files: |
             ${{ env.APK1_PATH }}
             ${{ env.APK2_PATH }}
+          token: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Prepare upload paths
         run: |
