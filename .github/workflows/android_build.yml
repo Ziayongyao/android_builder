@@ -1,83 +1,78 @@
-name: android_build
+name: build
 
 on:
-  workflow_dispatch:
   schedule:
-    - cron: '0 0/6 * * *'  # 每6小时自动触发一次
+    - cron: '0 */6 * * *'  # 每6小时执行一次
+  workflow_dispatch:
 
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout the code
-        uses: actions/checkout@v3
-        with:
-          fetch-depth: 1 
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: 17
+
       - name: Get project name
         id: get-project
         run: |
           PROJECT=$(cat project-to-build)
           echo "project=$PROJECT" >> $GITHUB_OUTPUT
-      - name: Clone project
-        run: git clone ${{ steps.get-project.outputs.project }} project
-        # 修改 fetch-depth 以支持提交历史比对
 
-      - name: Fetch remote HEAD
-        working-directory: ./project
-        run: git fetch origin main
-
-      - name: Get current remote HEAD
-        working-directory: ./project
-        run: |
-          REMOTE_HEAD=$(git rev-parse origin/main)
-          echo "REMOTE_HEAD=$REMOTE_HEAD" >> $GITHUB_ENV
-          echo "$REMOTE_HEAD" > REMOTE_HEAD
-
-      - name: Restore previous remote HEAD cache
+      - name: Restore previous hash from cache
         uses: actions/cache@v3
         with:
-          key: ${{ steps.get-project.outputs.project }}-remote-head
-          restore-keys: ${{ steps.get-project.outputs.project }}-remote-head
+          path: previous_hash.txt
+          key: ${{ steps.get-project.outputs.project }}-hash
+          restore-keys: |
+            ${{ steps.get-project.outputs.project }}-hash
 
-      - name: Compare remote HEAD changes
-        id: compare_head
+      - name: Get remote HEAD hash
+        id: get-remote-hash
         run: |
-          PREVIOUS_REMOTE_HEAD=
-          if [ -f REMOTE_HEAD ]; then
-            PREVIOUS_REMOTE_HEAD=$(cat REMOTE_HEAD)
+          REMOTE_HASH=$(git ls-remote ${{ steps.get-project.outputs.project }} HEAD | awk '{print $1}')
+          PREVIOUS_HASH=""
+          if [ -f previous_hash.txt ]; then
+            PREVIOUS_HASH=$(cat previous_hash.txt)
           fi
 
-          if [ "$PREVIOUS_REMOTE_HEAD" = "$REMOTE_HEAD" ]; then
-            echo "No new commits found. Skipping build."
-            echo "SKIP_BUILD=true" >> $GITHUB_ENV
+          if [ "$REMOTE_HASH" = "$PREVIOUS_HASH" ]; then
+            echo "No new commits since last check. Exiting workflow."
+            exit 0
           else
-            echo "New commits detected. Proceeding with build."
-            echo "SKIP_BUILD=false" >> $GITHUB_ENV
+            echo "New commit detected. Proceeding with build."
+            echo "$REMOTE_HASH" > previous_hash.txt
           fi
 
-      - name: Cache current remote HEAD
+      - name: Save current hash to cache
         uses: actions/cache@v3
         with:
-          key: ${{ steps.get-project.outputs.project }}-remote-head
-          path: REMOTE_HEAD
-          if-no-save-error: true
+          path: previous_hash.txt
+          key: ${{ steps.get-project.outputs.project }}-hash
+          restore-keys: ''
+
+      - name: Clone project
+        run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
+
+      - name: Setup Gradle cache
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle-
 
       - name: Build the app
-        if: env.SKIP_BUILD == 'false'
         working-directory: ./project
         run: |
           ./gradlew --no-daemon assembleDebug --stacktrace
+
       - name: Get APK file paths
         run: |
           apks=($(find project -type f -name "*.apk" | head -n 2))
           echo "APK1_PATH=${apks[0]}" >> $GITHUB_ENV
           echo "APK2_PATH=${apks[1]}" >> $GITHUB_ENV
-          # 新增原始文件名环境变量
           echo "APK1_NAME=${apks[0]##*/}" >> $GITHUB_ENV
           echo "APK2_NAME=${apks[1]##*/}" >> $GITHUB_ENV
 
@@ -86,7 +81,6 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.APK1_PATH }}
-          # 使用原始文件名作为上传名称
           name: ${{ env.APK1_NAME }}
 
       - name: Upload Second APK
@@ -94,5 +88,4 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.APK2_PATH }}
-          # 使用原始文件名作为上传名称
           name: ${{ env.APK2_NAME }}
