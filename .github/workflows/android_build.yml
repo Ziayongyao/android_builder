@@ -35,25 +35,25 @@ jobs:
           ./gradlew --no-daemon assembleDebug --stacktrace
       - name: Get APK file paths
         run: |
-          # 查找构建输出的APK文件（通常在app/build/outputs/apk/目录下）
           apks=($(find project -type f -name "*.apk" | head -n 2))
-          # 直接导出原始构建路径
           echo "APK1_PATH=${apks[0]}" >> $GITHUB_ENV
           echo "APK2_PATH=${apks[1]}" >> $GITHUB_ENV
-          # 输出原始文件名调试信息
-          echo "APK1 Original Name: ${apks[0]##*/}"
-          echo "APK2 Original Name: ${apks[1]##*/}"
+          # 新增原始文件名环境变量
+          echo "APK1_NAME=${apks[0]##*/}" >> $GITHUB_ENV
+          echo "APK2_NAME=${apks[1]##*/}" >> $GITHUB_ENV
 
       - name: Upload First APK
         if: ${{ env.APK1_PATH != null && env.APK1_PATH != '' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.APK1_PATH }}
-          name: ${apks[0]}
+          # 使用原始文件名作为上传名称
+          name: ${{ env.APK1_NAME }}
 
       - name: Upload Second APK
         if: ${{ env.APK2_PATH != null && env.APK2_PATH != '' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.APK2_PATH }}
-          name: ${apks[1]}
+          # 使用原始文件名作为上传名称
+          name: ${{ env.APK2_NAME }}
