@@ -85,20 +85,22 @@ jobs:
           echo "APK1_NAME=${apks[0]##*/}" >> $GITHUB_ENV
           echo "APK2_NAME=${apks[1]##*/}" >> $GITHUB_ENV
 
+        # 替换废弃的GitHub Release动作
+        # 新增peter-evans/create-release@v3实现相同功能
       - name: Create GitHub Release
         if: ${{ !env.SKIP_BUILD }}
-        uses: ncipollo/create-release@v2
+        uses: peter-evans/create-release@v3
         with:
-          tag: ${{ steps.get-remote-hash.outputs.REMOTE_HASH }}
-          name: ${{ format('Build {0}', steps.get-remote-hash.outputs.REMOTE_HASH) }}
-          body: |
+          tag-name: ${{ steps.get-remote-hash.outputs.REMOTE_HASH }}
+          release-name: ${{ format('Build {0}', steps.get-remote-hash.outputs.REMOTE_HASH) }}
+          body-text: |
             ${{ format('自动构建发布 - 提交哈希: {0}', steps.get-remote-hash.outputs.REMOTE_HASH) }}
             
             提取自远程仓库的最新提交信息:
             $(git log -1 --pretty=%B ${{ steps.get-remote-hash.outputs.REMOTE_HASH }})
           draft: false
           prerelease: false
-          files: |
+          artifact-paths: |
             ${{ env.APK1_PATH }}
             ${{ env.APK2_PATH }}
 
