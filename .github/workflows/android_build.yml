@@ -8,6 +8,8 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:  # 新增权限配置（关键修改）
+      contents: write  # 创建release需要写入权限
     env:
       # 新增全局环境变量定义
       PROJECT_REPO: https://github.com/Fansirsqi/Sesame-TK  # 项目仓库地址变量
@@ -128,12 +130,12 @@ jobs:
           echo "RELEASE_BODY=$COMMIT_MSG\n\n$DESCRIPTION" >> $GITHUB_ENV
 
       - name: Create Release
-        #if: ${{ !env.SKIP_BUILD }}
-        uses: actions/create-release@v1
+        #if: ${{ !env.SKIP_BUILD }}  # 恢复条件判断（取消注释）
+        uses: actions/create-release@v2
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           release_name: ${{ env.RELEASE_NAME }}
           body: ${{ env.RELEASE_BODY }}
           draft: false
           prerelease: false
-          token: ${{ secrets.GITHUB_TOKEN }}  # 修改参数名回token，并保留值
+          github-token: ${{ secrets.GITHUB_TOKEN }}
