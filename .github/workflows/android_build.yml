@@ -57,11 +57,11 @@ jobs:
           path: previous_hash.txt
           key: ${{ steps.get-project.outputs.project }}-hash
           restore-keys: ''
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+        #if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
 
       - name: Clone project
         run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+        #if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
 
       - name: Setup Gradle cache
         uses: actions/cache@v3
@@ -69,13 +69,13 @@ jobs:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle-
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+        #if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
 
       - name: Build the app
         working-directory: ./project
         run: |
           ./gradlew --no-daemon assembleDebug --stacktrace
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+        #if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
 
       - name: Get APK file paths
         run: |
@@ -85,8 +85,6 @@ jobs:
           echo "APK1_NAME=${apks[0]##*/}" >> $GITHUB_ENV
           echo "APK2_NAME=${apks[1]##*/}" >> $GITHUB_ENV
 
-        # 替换废弃的GitHub Release动作
-        # 新增peter-evans/create-release@v3实现相同功能
       - name: Create GitHub Release
         if: ${{ !env.SKIP_BUILD }}
         uses: softprops/action-gh-release@v2
