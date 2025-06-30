@@ -15,6 +15,10 @@ jobs:
           distribution: 'temurin'
           java-version: 17
 
+      - name: Create project-to-build file
+        run: |
+          echo "https://github.com/Fansirsqi/Sesame-TK" > project-to-build
+
       - name: Get project name
         id: get-project
         run: |
