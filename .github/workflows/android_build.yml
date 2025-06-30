@@ -37,14 +37,17 @@ jobs:
         run: |
           temp_dir=$(mktemp -d)
           find project -type f -name "*.apk" -exec mv {} "$temp_dir" \;
-          echo "APK_DIR=$temp_dir" >> $GITHUB_ENV
-      - name: List APK files
-        run: |
-          echo "Listing files in $APK_DIR:"
-          ls -l $APK_DIR
-      - name: Upload APKs
+          # 获取两个APK路径并导出为环境变量
+          readarray -t apks < <(ls "$temp_dir"/*.apk | head -n 2)
+          echo "APK1_PATH=${apks[0]}" >> $GITHUB_ENV
+          echo "APK2_PATH=${apks[1]}" >> $GITHUB_ENV
+
+      - name: Upload First APK
         uses: actions/upload-artifact@v4
         with:
-          name: "apks"
-          path: |
-            $APK_DIR/*.apk
+          path: $APK1_PATH
+
+      - name: Upload Second APK
+        uses: actions/upload-artifact@v4
+        with:
+          path: $APK2_PATH
