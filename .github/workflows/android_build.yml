@@ -33,7 +33,12 @@ jobs:
         working-directory: ./project
         run: |
           ./gradlew --no-daemon assembleDebug --stacktrace
+      - name: Move APK to temporary directory
+        run: |
+          temp_dir=$(mktemp -d)
+          find project -type f -name "*.apk" -exec mv {} "$temp_dir" \;
+          echo "APK_DIR=$temp_dir" >> $GITHUB_ENV
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          path: project/**/*.apk
+          path: $APK_DIR/*.apk
