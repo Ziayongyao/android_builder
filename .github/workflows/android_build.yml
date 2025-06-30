@@ -46,24 +46,14 @@ jobs:
           if [ ${#APK_FILES[@]} -eq 0 ]; then
             echo "apk_paths=" >> $GITHUB_OUTPUT
           else
-            echo "apk_paths=$(printf '%s\n' "${APK_FILES[@]}")" >> $GITHUB_OUTPUT
+            # 使用双引号包裹每个路径以处理特殊字符
+            echo "apk_paths=$(printf '\"%s\"\n' "${APK_FILES[@]}")" >> $GITHUB_OUTPUT
           fi
-
-  upload_apk:
-    needs: build
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        apk: ${{ fromJSON(needs.build.outputs.apk_paths || '[""]') }}
-    steps:
-      - name: Download Artifact
-        uses: actions/download-artifact@v4
-        with:
-          path: project
 
       - name: Upload APK
         if: matrix.apk != ''
         uses: actions/upload-artifact@v4
         with:
           name: my-build-apk-${{ matrix.apk }}
-          path: ${{ matrix.apk }}
+          # 添加双引号包裹路径并转义特殊字符
+          path: "$(echo ${{ matrix.apk }} | sed 's/[+.]/\\&/g')"
