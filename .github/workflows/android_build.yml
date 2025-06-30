@@ -42,17 +42,24 @@ jobs:
       - name: Find APK files
         id: find-apk
         run: |
-          APK_FILES=($(find . -type f -name "*.apk" | sort -r | head -n 2))
-          if [ ${#APK_FILES[@]} -eq 0 ]; then
-            echo "apk_paths=" >> $GITHUB_OUTPUT
-          else
-            # 使用空格分隔并用双引号包裹整个路径列表
-            echo "apk_paths=\"$(printf '%s ' "${APK_FILES[@]}")\"" >> $GITHUB_OUTPUT
-          fi
+          # 分别查找正常版和兼容版APK
+          NORMAL_APK=$(find . -type f -name "*normal*.apk" | head -n 1)
+          COMPAT_APK=$(find . -type f -name "*compat*.apk" | head -n 1)
+          
+          # 输出两个版本的APK路径
+          echo "apk_normal=$NORMAL_APK" >> $GITHUB_OUTPUT
+          echo "apk_compat=$COMPAT_APK" >> $GITHUB_OUTPUT
 
-      - name: Upload APK
-        if: ${{ steps.find-apk.outputs.apk_paths != '' }}
+      - name: Upload Normal APK
+        if: steps.find-apk.outputs.apk_normal != ''
         uses: actions/upload-artifact@v4
         with:
-          name: my-build-apk
-          path: ${{ steps.find-apk.outputs.apk_paths }}
+          name: my-normal-apk
+          path: ${{ steps.find-apk.outputs.apk_normal }}
+
+      - name: Upload Compatibility APK
+        if: steps.find-apk.outputs.apk_compat != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: my-compat-apk
+          path: ${{ steps.find-apk.outputs.apk_compat }}
