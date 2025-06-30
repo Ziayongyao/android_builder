@@ -86,7 +86,7 @@ jobs:
           echo "APK2_NAME=${apks[1]##*/}" >> $GITHUB_ENV
 
       - name: Create GitHub Release
-        if: ${{ !env.SKIP_BUILD }}
+        #if: ${{ !env.SKIP_BUILD }}
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get-remote-hash.outputs.REMOTE_HASH }}
