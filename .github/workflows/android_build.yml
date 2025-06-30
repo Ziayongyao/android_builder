@@ -62,11 +62,11 @@ jobs:
           path: previous_hash.txt
           key: ${{ steps.get-project.outputs.project }}-hash
           restore-keys: ''
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+        #if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
 
       - name: Clone project
         run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+        ##if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
 
       - name: Setup Gradle cache
         uses: actions/cache@v3
@@ -74,13 +74,13 @@ jobs:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle-
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+        #if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
 
       - name: Build the app
         working-directory: ./project
         run: |
           ./gradlew --no-daemon assembleDebug --stacktrace
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+        #if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
 
       - name: Get APK file paths
         run: |
@@ -105,7 +105,7 @@ jobs:
           name: ${{ env.APK2_NAME }}
 
       - name: Get remote repository info
-        if: ${{ !env.SKIP_BUILD }}
+        #if: ${{ !env.SKIP_BUILD }}
         run: |
           # 使用环境变量动态构造API地址
           PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's/.*github.com\/\(.*\)/\1/')
@@ -127,7 +127,7 @@ jobs:
           echo "RELEASE_BODY=$COMMIT_MSG\n\n$DESCRIPTION" >> $GITHUB_ENV
 
       - name: Create Release
-        if: ${{ !env.SKIP_BUILD }}
+        #if: ${{ !env.SKIP_BUILD }}
         uses: actions/create-release@v1
         with:
           tag_name: ${{ env.RELEASE_TAG }}
