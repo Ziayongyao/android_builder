@@ -32,6 +32,7 @@ jobs:
           key: ${{ steps.get-project.outputs.project }}-hash
           restore-keys: |
             ${{ steps.get-project.outputs.project }}-hash
+        continue-on-error: true  # 新增：允许缓存未命中时继续执行
 
       - name: Get remote HEAD hash
         id: get-remote-hash
@@ -93,3 +94,8 @@ jobs:
         with:
           path: ${{ env.APK2_PATH }}
           name: ${{ env.APK2_NAME }}
+
+      - name: Clean up workspace
+        run: |
+          rm -rf project/
+          rm -f previous_hash.txt
