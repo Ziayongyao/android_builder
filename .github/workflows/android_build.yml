@@ -41,16 +41,20 @@ jobs:
           readarray -t apks < <(ls "$temp_dir"/*.apk | head -n 2)
           echo "APK1_PATH=${apks[0]}" >> $GITHUB_ENV
           echo "APK2_PATH=${apks[1]}" >> $GITHUB_ENV
+          # 输出日志调试信息
+          echo "APK1_PATH: ${{ env.APK1_PATH }}"
+          echo "APK2_PATH: ${{ env.APK2_PATH }}"
 
       - name: Upload First APK
+        if: ${{ env.APK1_PATH != null && env.APK1_PATH != '' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.APK1_PATH }}
-          # 显式验证文件存在性
-          if: ${{ env.APK1_PATH != null && env.APK1_PATH != '' }}
+          name: First-APK
 
       - name: Upload Second APK
+        if: ${{ env.APK2_PATH != null && env.APK2_PATH != '' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.APK2_PATH }}
-          if: ${{ env.APK2_PATH != null && env.APK2_PATH != '' }}
+          name: Second-APK
