@@ -49,9 +49,11 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.APK1_PATH }}
+          name: ${apks[0]##*/}
 
       - name: Upload Second APK
         if: ${{ env.APK2_PATH != null && env.APK2_PATH != '' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.APK2_PATH }}
+          name: ${apks[1]##*/}
