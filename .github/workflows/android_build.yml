@@ -136,4 +136,4 @@ jobs:
           body: ${{ env.RELEASE_BODY }}
           draft: false
           prerelease: false
-          github-token: ${{ secrets.GITHUB_TOKEN }}  # 修改参数名为github-token
+          token: ${{ secrets.GITHUB_TOKEN }}  # 修改参数名回token，并保留值
