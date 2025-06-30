@@ -42,7 +42,9 @@ jobs:
         run: |
           echo "Listing files in $APK_DIR:"
           ls -l $APK_DIR
-      - name: Upload APK
+      - name: Upload APKs
         uses: actions/upload-artifact@v4
         with:
-          path: $APK_DIR
+          name: "apks"
+          path: |
+            $APK_DIR/*.apk
