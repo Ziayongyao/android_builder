@@ -1,4 +1,4 @@
-name: android_build
+name: build
 
 on:
   workflow_dispatch:
@@ -10,56 +10,31 @@ jobs:
       - name: Checkout the code
         uses: actions/checkout@v3
         with:
-          fetch-depth: 1
-      
+          fetch-depth: 1 
       - name: Set up JDK
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: 17
-      
       - name: Get project name
         id: get-project
         run: |
           PROJECT=$(cat project-to-build)
           echo "project=$PROJECT" >> $GITHUB_OUTPUT
-      
       - name: Clone project
         run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
-      
       - name: Setup Gradle cache
         uses: actions/cache@v3
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle-
-      
       - name: Build the app
         working-directory: ./project
         run: |
           ./gradlew --no-daemon assembleDebug --stacktrace
-      
-      - name: Find APK files
-        id: find-apk
-        run: |
-          # 分别查找正常版和兼容版APK
-          NORMAL_APK=$(find . -type f -name "*normal*.apk" | head -n 1)
-          COMPAT_APK=$(find . -type f -name "*compat*.apk" | head -n 1)
-          
-          # 输出两个版本的APK路径
-          echo "apk_normal=$NORMAL_APK" >> $GITHUB_OUTPUT
-          echo "apk_compat=$COMPAT_APK" >> $GITHUB_OUTPUT
-
-      - name: Upload Normal APK
-        if: steps.find-apk.outputs.apk_normal != ''
+      - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
-          name: my-normal-apk
-          path: ${{ steps.find-apk.outputs.apk_normal }}
-
-      - name: Upload Compatibility APK
-        if: steps.find-apk.outputs.apk_compat != ''
-        uses: actions/upload-artifact@v4
-        with:
-          name: my-compat-apk
-          path: ${{ steps.find-apk.outputs.apk_compat }}
+          path: ./**/*.apk
+          multiple: true
