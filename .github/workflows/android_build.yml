@@ -31,19 +31,41 @@ jobs:
         working-directory: ./project
         run: git fetch origin main
 
-      - name: Check for new commits
+      - name: Get current remote HEAD
         working-directory: ./project
-        id: check_new_commits
         run: |
-          LOCAL_HEAD=$(git rev-parse HEAD)
           REMOTE_HEAD=$(git rev-parse origin/main)
-          if [ "$LOCAL_HEAD" = "$REMOTE_HEAD" ]; then
+          echo "REMOTE_HEAD=$REMOTE_HEAD" >> $GITHUB_ENV
+          echo "$REMOTE_HEAD" > REMOTE_HEAD
+
+      - name: Restore previous remote HEAD cache
+        uses: actions/cache@v3
+        with:
+          key: ${{ steps.get-project.outputs.project }}-remote-head
+          restore-keys: ${{ steps.get-project.outputs.project }}-remote-head
+
+      - name: Compare remote HEAD changes
+        id: compare_head
+        run: |
+          PREVIOUS_REMOTE_HEAD=
+          if [ -f REMOTE_HEAD ]; then
+            PREVIOUS_REMOTE_HEAD=$(cat REMOTE_HEAD)
+          fi
+
+          if [ "$PREVIOUS_REMOTE_HEAD" = "$REMOTE_HEAD" ]; then
             echo "No new commits found. Skipping build."
             echo "SKIP_BUILD=true" >> $GITHUB_ENV
           else
             echo "New commits detected. Proceeding with build."
             echo "SKIP_BUILD=false" >> $GITHUB_ENV
           fi
+
+      - name: Cache current remote HEAD
+        uses: actions/cache@v3
+        with:
+          key: ${{ steps.get-project.outputs.project }}-remote-head
+          path: REMOTE_HEAD
+          if-no-save-error: true
 
       - name: Build the app
         if: env.SKIP_BUILD == 'false'
