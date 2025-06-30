@@ -89,7 +89,7 @@ jobs:
         # 新增peter-evans/create-release@v3实现相同功能
       - name: Create GitHub Release
         if: ${{ !env.SKIP_BUILD }}
-        uses: peter-evans/create-release@v3
+        uses: peter-evans/create-release@v4
         with:
           tag-name: ${{ steps.get-remote-hash.outputs.REMOTE_HASH }}
           release-name: ${{ format('Build {0}', steps.get-remote-hash.outputs.REMOTE_HASH) }}
