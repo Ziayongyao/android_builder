@@ -131,7 +131,7 @@ jobs:
 
       - name: Create Release
         if: ${{ !env.SKIP_BUILD }}  # 恢复条件判断（取消注释）
-        uses: actions/create-release@v1
+        uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.RELEASE_TAG }}
           release_name: ${{ env.RELEASE_NAME }}
