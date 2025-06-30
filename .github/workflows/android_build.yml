@@ -105,7 +105,8 @@ jobs:
           name: ${{ env.APK2_NAME }}
 
       - name: Get remote repository info
-        #if: ${{ !env.SKIP_BUILD }}
+        if: ${{ !env.SKIP_BUILD }}
+        working-directory: ./project  # 新增：指定工作目录为克隆的项目目录
         run: |
           # 使用环境变量动态构造API地址
           PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's/.*github.com\/\(.*\)/\1/')
@@ -119,7 +120,7 @@ jobs:
           REPO_INFO=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
           
           LATEST_TAG=$(echo "$REPO_INFO" | jq -r '.default_branch')
-          COMMIT_MSG=$(git log -1 --pretty=%B)
+          COMMIT_MSG=$(git log -1 --pretty=%B)  # 此时已在项目目录中执行
           DESCRIPTION=$(echo "$REPO_INFO" | jq -r '.description')
 
           echo "RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
