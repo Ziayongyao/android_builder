@@ -38,6 +38,10 @@ jobs:
           temp_dir=$(mktemp -d)
           find project -type f -name "*.apk" -exec mv {} "$temp_dir" \;
           echo "APK_DIR=$temp_dir" >> $GITHUB_ENV
+      - name: List APK files
+        run: |
+          echo "Listing files in $APK_DIR:"
+          ls -l $APK_DIR
       - name: Upload APK
         uses: actions/upload-artifact@v4
         with:
