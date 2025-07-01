@@ -71,7 +71,7 @@ jobs:
         if: ${{ !env.SKIP_BUILD }}
       
       - name: 提取版本信息
-        working-directory: ./project
+        working-directory: ${{ env.GITHUB_WORKSPACE }}/project
         run: |
           BUILD_GRADLE="app/build.gradle.kts"
           # 从远程仓库获取最新文件内容
