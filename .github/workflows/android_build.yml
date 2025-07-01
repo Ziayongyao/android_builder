@@ -111,44 +111,42 @@ jobs:
 
       - name: 获取APK文件路径
         run: |
-          APK_SEARCH_PATH="$(pwd)/project"  # 修改为绝对路径确保路径有效性
+          APK_SEARCH_PATH="$(pwd)/project"
           
+          # 查找所有APK文件并按修改时间排序
           apks=($(find $APK_SEARCH_PATH -type f -name "*.apk" -exec stat -c "%Y %n" {} \; | sort -nr | head -n 2 | awk '{print $2}'))
           
           if [ ${#apks[@]} -eq 0 ]; then
-            echo "ERROR: 未找到任何APK文件，请检查以下内容："
-            echo "1. 构建过程是否成功生成APK"
-            echo "2. 构建类型是否匹配（debug/release）"
-            echo "3. 项目模块名称是否与路径匹配"
+            echo "ERROR: 未找到任何APK文件"
             exit 1
           fi
           
-          for apk in "${apks[@]}"; do
-            if [ ! -f "$apk" ]; then
-              echo "ERROR: 文件 $apk 不存在，请检查路径有效性"
-              exit 1
-            fi
-          done
-          
           # 创建缓存目录并复制APK文件
           mkdir -p "$(pwd)/apks_cache"
-          cp -f "${apks[0]}" "$(pwd)/apks_cache/"
-          if [ -n "${apks[1]}" ]; then
-            cp -f "${apks[1]}" "$(pwd)/apks_cache/"
+          for apk in "${apks[@]}"; do
+            cp -f "$apk" "$(pwd)/apks_cache/"
+            echo "DEBUG: 已复制APK文件: $apk"
+          done
+          
+          # 列出缓存目录内容进行调试
+          echo "DEBUG: 缓存目录内容:"
+          ls -la "$(pwd)/apks_cache/"
+          
+          # 设置环境变量，直接使用缓存目录中的APK文件
+          APK_FILES=($(ls "$(pwd)/apks_cache/*.apk"))
+          echo "APK1_PATH=${APK_FILES[0]}" >> $GITHUB_ENV
+          if [ ${#APK_FILES[@]} -ge 2 ]; then
+            echo "APK2_PATH=${APK_FILES[1]}" >> $GITHUB_ENV
+          else
+            echo "APK2_PATH=" >> $GITHUB_ENV
           fi
-          
-          # 修改为绝对路径确保后续步骤可用
-          echo "APK1_PATH=$(pwd)/apks_cache/$(basename ${apks[0]})" >> $GITHUB_ENV
-          echo "APK2_PATH=$(pwd)/apks_cache/$(basename ${apks[1]:-})" >> $GITHUB_ENV
-          
-          echo "DEBUG: 找到${#apks[@]}个APK文件，路径分别为：${apks[0]} 和 ${apks[1]:-无}"
 
       - name: 创建发布版本
         if: ${{ !env.SKIP_BUILD }}
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          name: ${{ env.RELEASE_NAME }} 
+          name: ${{ env.RELEASE_NAME }}
           body: ${{ env.RELEASE_BODY }}
           draft: false
           prerelease: false
