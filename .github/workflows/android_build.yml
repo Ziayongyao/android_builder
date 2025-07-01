@@ -71,8 +71,9 @@ jobs:
         if: ${{ !env.SKIP_BUILD }}
       
       - name: 提取版本信息
+        working-directory: ./project
         run: |
-          BUILD_GRADLE="build.gradle.kts"
+          BUILD_GRADLE="app/build.gradle.kts"
           # 从远程仓库获取最新文件内容
           git show HEAD:app/build.gradle.kts > $BUILD_GRADLE || exit 1
           
