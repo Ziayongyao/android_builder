@@ -71,7 +71,7 @@ jobs:
         if: ${{ !env.SKIP_BUILD }}
       
       - name: 提取版本信息
-        working-directory: ./project
+        working-directory: ${{ env.GITHUB_WORKSPACE }}/project
         run: |
           BUILD_GRADLE="app/build.gradle.kts"
           if [ ! -f "$BUILD_GRADLE" ]; then
