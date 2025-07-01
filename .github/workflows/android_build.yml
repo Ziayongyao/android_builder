@@ -111,24 +111,12 @@ jobs:
 
       - name: 获取APK文件路径
         run: |
-          # 修改路径匹配逻辑，增加容错处理和调试信息
-          APK_SEARCH_PATH="./project/app/build/outputs/apk"
-          echo "DEBUG: 开始查找APK文件..."
-          echo "DEBUG: 当前工作目录内容:"
-          ls -R $APK_SEARCH_PATH  # 新增：递归列出构建输出目录内容
-
-          # 删除原限制性目录查找，改为递归查找所有子目录中的APK文件
-          # 新增：递归查找所有子目录中的APK文件并验证文件存在性
+          # 设置APK搜索路径（根据实际项目结构调整）
+          APK_SEARCH_PATH="./project/app/build/outputs/apk/debug"
+          
+          # 递归查找所有子目录中的APK文件并验证文件存在性
           apks=($(find $APK_SEARCH_PATH -type f -name "*.apk" 2>/dev/null | sort -r | head -n 2))
           
-          if [ ${#apks[@]} -eq 0 ]; then
-            echo "ERROR: 未找到任何APK文件，请检查以下内容："
-            echo "1. 构建命令是否正确执行（查看上方构建日志）"
-            echo "2. 是否配置了正确的输出路径（当前搜索路径：$APK_SEARCH_PATH）"
-            echo "3. 项目结构是否符合预期（建议检查build.gradle配置）"
-            exit 1
-          fi
-
           # 新增：验证文件实际存在性
           for apk in "${apks[@]}"; do
             if [ ! -f "$apk" ]; then
@@ -136,17 +124,15 @@ jobs:
               exit 1
             fi
           done
-
-          # 提取文件名并替换非法字符
-          APK1_NAME="${apks[0]##*/}"
-          APK1_NAME="${APK1_NAME//\//_}"
-          APK2_NAME="${apks[1]##*/}"
-          APK2_NAME="${APK2_NAME//\//_}"
-
+          
+          # 新增：将APK路径写入环境变量供后续步骤使用
           echo "APK1_PATH=${apks[0]}" >> $GITHUB_ENV
-          echo "APK2_PATH=${apks[1]:-}" >> $GITHUB_ENV
-          echo "APK1_NAME=${APK1_NAME}" >> $GITHUB_ENV
-          echo "APK2_NAME=${APK2_NAME}" >> $GITHUB_ENV
+          if [ ${#apks[@]} -gt 1 ]; then
+            echo "APK2_PATH=${apks[1]}" >> $GITHUB_ENV
+          else
+            echo "APK2_PATH=" >> $GITHUB_ENV
+          fi
+          
           echo "DEBUG: 找到${#apks[@]}个APK文件，路径分别为：${apks[0]} 和 ${apks[1]:-无}"
 
       - name: 创建发布版本
