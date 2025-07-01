@@ -27,8 +27,8 @@ jobs:
       - name: 获取项目名称
         id: get-project
         run: |
-          # 提取仓库短名称作为缓存key
-          PROJECT=$(cat project-to-build | sed 's/.*github.com.///;s/.git$//')
+          # 提取仓库短名称作为缓存key（修正sed分隔符问题）
+          PROJECT=$(cat project-to-build | sed 's@.*github.com.@@;s@.git$@@')
           echo "project=$PROJECT" >> $GITHUB_OUTPUT
 
       - name: 从缓存恢复先前哈希
