@@ -123,13 +123,18 @@ jobs:
             export ANDROID_HOME=/usr/local/lib/android/sdk
           fi
           
-          # 使用aapt2从APK文件中提取版本名称
+          # 使用aapt2 dump badging正确命令格式从APK文件中提取版本名称
           VERSION_NAME=$($ANDROID_HOME/build-tools/*/aapt2 dump badging "${{ env.APK1_PATH }}" | \
                         grep -oP "versionName='\K[^']+" | \
                         head -1)
           
+          if [ -z "$VERSION_NAME" ]; then
+            echo "ERROR: 无法从APK提取版本信息"
+            exit 1
+          fi
+          
           # 输出到环境变量
-          echo "RELEASE_TAG=$VERSION_NAME" >> $GITHUB_ENV
+          echo "RELEASE_TAG=v$VERSION_NAME" >> $GITHUB_ENV
           echo "RELEASE_NAME=Build for $VERSION_NAME" >> $GITHUB_ENV
           echo "RELEASE_BODY=Automated build for version $VERSION_NAME" >> $GITHUB_ENV
         if: ${{ !env.SKIP_BUILD }}
