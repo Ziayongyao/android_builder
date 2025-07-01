@@ -111,7 +111,7 @@ jobs:
 
       - name: 获取APK文件路径
         run: |
-          APK_SEARCH_PATH="./project"
+          APK_SEARCH_PATH="$(pwd)/project"  # 修改为绝对路径确保路径有效性
           
           apks=($(find $APK_SEARCH_PATH -type f -name "*.apk" -exec stat -c "%Y %n" {} \; | sort -nr | head -n 2 | awk '{print $2}'))
           
@@ -145,6 +145,6 @@ jobs:
           draft: false
           prerelease: false
           files: |
-            - ${{ env.APK1_PATH }}
-            - ${{ env.APK2_PATH }}
+            - "${{ env.APK1_PATH }}"  # 新增双引号包裹路径
+            - "${{ env.APK2_PATH }}"  # 新增双引号包裹路径
           token: ${{ secrets.GITHUB_TOKEN }}
