@@ -49,10 +49,10 @@ jobs:
           if [ -f previous_hash.txt ]; then
             PREVIOUS_HASH=$(cat previous_hash.txt)
           fi
-
           # 新增：输出哈希值用于调试
           echo "REMOTE_HASH=$REMOTE_HASH"
           echo "PREVIOUS_HASH=$PREVIOUS_HASH"
+
 
           if [ "$REMOTE_HASH" = "$PREVIOUS_HASH" ]; then
             echo "No new commits since last check. Skipping workflow."
@@ -116,6 +116,9 @@ jobs:
           echo "APK2_PATH=${apks[1]}" >> $GITHUB_ENV
           echo "APK1_NAME=${apks[0]##*/}" >> $GITHUB_ENV
           echo "APK2_NAME=${apks[1]##*/}" >> $GITHUB_ENV
+          # 添加调试输出，验证APK路径
+          echo "DEBUG: APK1_PATH=$APK1_PATH"
+          echo "DEBUG: APK2_PATH=$APK2_PATH"
 
       - name: 上传第一个APK
         if: ${{ env.APK1_PATH != null && env.APK1_PATH != '' }}
