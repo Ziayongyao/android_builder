@@ -67,7 +67,7 @@ jobs:
         if: ${{ !env.SKIP_BUILD }}
 
       - name: 克隆项目
-        run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
+        run: git clone --depth=1 ${{ env.PROJECT_REPO }}.git project
         if: ${{ !env.SKIP_BUILD }}
       
       - name: 获取远程仓库信息
