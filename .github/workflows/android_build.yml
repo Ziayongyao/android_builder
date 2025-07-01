@@ -2,7 +2,7 @@ name: android_build
 
 on:
   schedule:
-    - cron: '0 0 * * *'
+    - cron: '0 */6 * * *'  # 每6小时执行一次
   workflow_dispatch:
 
 jobs:
@@ -86,9 +86,16 @@ jobs:
           minor=$(grep -m 1 'val minor' $BUILD_GRADLE | awk -F '=' '{print $2}' | tr -d ' ')
           patch=$(grep -m 1 'val patch' $BUILD_GRADLE | awk -F '=' '{print $2}' | tr -d ' ')
           buildTag=$(grep -m 1 'val buildTag' $BUILD_GRADLE | awk -F '=' '{print $2}' | sed 's/[" ]//g')
-
-          # 构造标签
-          LATEST_TAG="$major.$minor.$patch-$buildTag"
+          
+          # 新增：提取buildTargetCode逻辑
+          buildTargetCode=$(grep -m 1 'val buildTargetCode' $BUILD_GRADLE | sed -n 's/.*"\(.*\)".*/\1/p')
+          
+          # 构造标签（根据buildTag类型决定格式）
+          if [[ "$buildTag" == *"alpha"* || "$buildTag" == *"beta"* ]]; then
+            LATEST_TAG="$major.$minor.$patch-$buildTag.$buildTargetCode"
+          else
+            LATEST_TAG="$major.$minor.$patch-$buildTag"
+          fi
 
           # 输出到环境变量
           echo "RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
