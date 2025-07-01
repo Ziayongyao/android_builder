@@ -111,13 +111,10 @@ jobs:
 
       - name: 获取APK文件路径
         run: |
-          # 新增递归搜索整个项目目录的APK文件
           APK_SEARCH_PATH="./project"
           
-          # 改进查找逻辑：按修改时间排序并严格验证
           apks=($(find $APK_SEARCH_PATH -type f -name "*.apk" -exec stat -c "%Y %n" {} \; | sort -nr | head -n 2 | awk '{print $2}'))
           
-          # 增强空值处理逻辑
           if [ ${#apks[@]} -eq 0 ]; then
             echo "ERROR: 未找到任何APK文件，请检查以下内容："
             echo "1. 构建过程是否成功生成APK"
@@ -126,7 +123,6 @@ jobs:
             exit 1
           fi
           
-          # 增加文件存在性验证
           for apk in "${apks[@]}"; do
             if [ ! -f "$apk" ]; then
               echo "ERROR: 文件 $apk 不存在，请检查路径有效性"
@@ -134,9 +130,8 @@ jobs:
             fi
           done
           
-          # 添加双引号转义特殊字符
-          echo "APK1_PATH=\"${apks[0]}\"" >> $GITHUB_ENV
-          echo "APK2_PATH=\"${apks[1]:-}\"" >> $GITHUB_ENV  # 使用bash参数扩展简化空值处理
+          echo "APK1_PATH=${apks[0]}" >> $GITHUB_ENV
+          echo "APK2_PATH=${apks[1]:-}" >> $GITHUB_ENV
           
           echo "DEBUG: 找到${#apks[@]}个APK文件，路径分别为：${apks[0]} 和 ${apks[1]:-无}"
 
@@ -149,8 +144,7 @@ jobs:
           body: ${{ env.RELEASE_BODY }}
           draft: false
           prerelease: false
-          # 使用双引号包裹文件路径变量
           files: |
-            - "${{ env.APK1_PATH }}"
-            - "${{ env.APK2_PATH }}"
+            - ${{ env.APK1_PATH }}
+            - ${{ env.APK2_PATH }}
           token: ${{ secrets.GITHUB_TOKEN }}
