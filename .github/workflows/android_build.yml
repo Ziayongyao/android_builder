@@ -2,7 +2,7 @@ name: android_build
 
 on:
   schedule:
-    - cron: '0 */6 * * *'  # 每6小时执行一次
+    - cron: '0 0 * * *'
   workflow_dispatch:
 
 jobs:
@@ -94,6 +94,7 @@ jobs:
           echo "RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
           echo "RELEASE_NAME=Build for $LATEST_TAG" >> $GITHUB_ENV
           echo "RELEASE_BODY=Automated build for version $LATEST_TAG" >> $GITHUB_ENV
+        if: ${{ !env.SKIP_BUILD }}
 
       - name: 配置Gradle缓存
         uses: actions/cache@v3
@@ -139,6 +140,7 @@ jobs:
           else
             echo "APK2_PATH=" >> $GITHUB_ENV
           fi
+        if: ${{ !env.SKIP_BUILD }}
 
       - name: 创建发布版本
         if: ${{ !env.SKIP_BUILD }}
