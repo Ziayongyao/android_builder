@@ -50,6 +50,10 @@ jobs:
             PREVIOUS_HASH=$(cat previous_hash.txt)
           fi
 
+          # 新增：输出哈希值用于调试
+          echo "REMOTE_HASH=$REMOTE_HASH"
+          echo "PREVIOUS_HASH=$PREVIOUS_HASH"
+
           if [ "$REMOTE_HASH" = "$PREVIOUS_HASH" ]; then
             echo "No new commits since last check. Skipping workflow."
             echo "SKIP_BUILD=1" >> $GITHUB_ENV
