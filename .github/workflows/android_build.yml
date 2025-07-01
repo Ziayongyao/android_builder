@@ -131,15 +131,15 @@ jobs:
           done
           
           # 创建缓存目录并复制APK文件
-          mkdir -p ./apks_cache
-          cp -f "${apks[0]}" ./apks_cache/
+          mkdir -p "$(pwd)/apks_cache"
+          cp -f "${apks[0]}" "$(pwd)/apks_cache/"
           if [ -n "${apks[1]}" ]; then
-            cp -f "${apks[1]}" ./apks_cache/
+            cp -f "${apks[1]}" "$(pwd)/apks_cache/"
           fi
           
-          # 修改环境变量为缓存目录路径
-          echo "APK1_PATH=./apks_cache/$(basename ${apks[0]})" >> $GITHUB_ENV
-          echo "APK2_PATH=./apks_cache/$(basename ${apks[1]:-})" >> $GITHUB_ENV
+          # 修改为绝对路径确保后续步骤可用
+          echo "APK1_PATH=$(pwd)/apks_cache/$(basename ${apks[0]})" >> $GITHUB_ENV
+          echo "APK2_PATH=$(pwd)/apks_cache/$(basename ${apks[1]:-})" >> $GITHUB_ENV
           
           echo "DEBUG: 找到${#apks[@]}个APK文件，路径分别为：${apks[0]} 和 ${apks[1]:-无}"
 
