@@ -109,7 +109,7 @@ jobs:
 
       - name: 获取远程仓库信息
         if: ${{ !env.SKIP_BUILD }}
-        working-directory: ./project  # 新增：指定工作目录为克隆的项目目录
+        working-directory: ./project
         run: |
           # 使用环境变量动态构造API地址
           PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's/.*github.com\/\(.*\)/\1/')
@@ -131,16 +131,16 @@ jobs:
           echo "RELEASE_BODY=$COMMIT_MSG\n\n$DESCRIPTION" >> $GITHUB_ENV
 
       - name: 创建发布版本
-        if: ${{ !env.SKIP_BUILD }}  # 恢复条件判断（取消注释）
+        if: ${{ !env.SKIP_BUILD }}
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          release_name: ${{ env.RELEASE_NAME }} #错误：名字为main   
+          name: ${{ env.RELEASE_NAME }} 
           body: ${{ env.RELEASE_BODY }}
           draft: false
           prerelease: false
           
-          files: |  # 新增APK文件作为发布资产
+          files: |
             - ${{ env.APK1_PATH }}
             - ${{ env.APK2_PATH }}
           token: ${{ secrets.GITHUB_TOKEN }}
