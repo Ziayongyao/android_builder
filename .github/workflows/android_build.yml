@@ -73,8 +73,10 @@ jobs:
       - name: 提取版本信息
         run: |
           BUILD_GRADLE="app/build.gradle.kts"
+          # 创建目标目录确保文件可写入
+          mkdir -p app
           # 从远程仓库直接获取文件内容（不依赖本地克隆）
-          PROJECT_API_URL=$(echo "${{ env.PROJECT_REPO }}" | sed 's@https://github.com/@https://api.github.com/repos/@')
+          PROJECT_API_URL=$(echo "${{ env.PROJECT_REPO }}" | sed 's@.*github.com.@@;s@.git$@@;s@^@https://api.github.com/repos/@')
           curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
                -H "Accept: application/vnd.github.v3.raw" \
                "$PROJECT_API_URL/contents/$BUILD_GRADLE?ref=main" > $BUILD_GRADLE || exit 1
