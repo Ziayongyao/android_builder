@@ -126,7 +126,7 @@ jobs:
           # 使用sed完整提取versionName单引号内的全部内容
           VERSION_NAME=$(aapt dump badging "${{ env.APK1_PATH }}" | grep "versionName" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
           echo "RELEASE_TAG=$VERSION_NAME" >> $GITHUB_ENV
-          echo "RELEASE_NAME=Build for $VERSION_NAME" >> $GITHUB_ENV
+          echo "RELEASE_NAME=v$VERSION_NAME" >> $GITHUB_ENV
         if: ${{ !env.SKIP_BUILD }}
 
       # 从远程仓库获取最新提交信息
@@ -139,9 +139,20 @@ jobs:
           
           COMMIT_SUBJECT=$(echo $COMMIT_DATA | jq -r '.commit.message | split("\n")[0]')
           COMMIT_BODY=$(echo $COMMIT_DATA | jq -r '.commit.message | sub(".*?\n"; "")')
+          # 新增：提取作者和提交时间
+          COMMIT_AUTHOR=$(echo $COMMIT_DATA | jq -r '.commit.author.name')
+          COMMIT_DATE=$(echo $COMMIT_DATA | jq -r '.commit.author.date')
+          COMMIT_URL=$(echo $COMMIT_DATA | jq -r '.html_url')
           
-          # 设置发布描述
-          echo "RELEASE_BODY=### 最新提交: $COMMIT_SUBJECT\n$COMMIT_BODY\n\nAutomated build for version ${{ env.RELEASE_TAG }}" >> $GITHUB_ENV
+          # 设置美化后的发布描述
+          echo "RELEASE_BODY=### 🚀 最新提交: [$COMMIT_SUBJECT]($COMMIT_URL)\n\n" \
+               "**作者**: $COMMIT_AUTHOR  \n" \
+               "**时间**: $COMMIT_DATE  \n\n" \
+               "**提交内容**:\n$COMMIT_BODY\n\n" \
+               "---\n\n" \
+               "🔧 **自动化构建信息**  \n" \
+               "- 版本: ${{ env.RELEASE_TAG }}\n" \
+               "- 构建时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
         if: ${{ !env.SKIP_BUILD }}
 
       - name: 创建发布版本
