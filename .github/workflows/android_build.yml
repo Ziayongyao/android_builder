@@ -49,10 +49,6 @@ jobs:
           if [ -f previous_hash.txt ]; then
             PREVIOUS_HASH=$(cat previous_hash.txt)
           fi
-          # 新增：输出哈希值用于调试
-          echo "REMOTE_HASH=$REMOTE_HASH"
-          echo "PREVIOUS_HASH=$PREVIOUS_HASH"
-
 
           if [ "$REMOTE_HASH" = "$PREVIOUS_HASH" ]; then
             echo "No new commits since last check. Skipping workflow."
@@ -111,29 +107,14 @@ jobs:
 
       - name: 获取APK文件路径
         run: |
-          # 修改路径匹配逻辑，增加容错处理和调试信息
-          APK_SEARCH_PATH="project/app/build/outputs/apk/"
-          echo "DEBUG: 开始查找APK文件..."
-          echo "DEBUG: 当前目录结构:"
-          find project -type d -name "*.apk" -o -name "apk" | sort
-
-          # 使用find命令递归查找所有APK文件并按修改时间排序
-          apks=($(find "$APK_SEARCH_PATH" -type f -name "*.apk" 2>/dev/null | sort -r | head -n 2))
-          
-          if [ ${#apks[@]} -eq 0 ]; then
-            echo "ERROR: 未找到任何APK文件，请检查以下内容："
-            echo "1. 构建命令是否正确执行"
-            echo "2. 是否配置了正确的输出路径"
-            echo "3. 项目结构是否符合预期"
-            exit 1
-          fi
-
+          apks=($(find project/app/build/outputs/apk -type f -name "*.apk" | head -n 2))
           echo "APK1_PATH=${apks[0]}" >> $GITHUB_ENV
-          echo "APK2_PATH=${apks[1]:-}" >> $GITHUB_ENV
+          echo "APK2_PATH=${apks[1]}" >> $GITHUB_ENV
           echo "APK1_NAME=${apks[0]##*/}" >> $GITHUB_ENV
-          echo "APK2_NAME=${apks[1]##*/:-}" >> $GITHUB_ENV
-          echo "DEBUG: 找到${#apks[@]}个APK文件，路径分别为：${apks[0]} 和 ${apks[1]:-无}"
-
+          echo "APK2_NAME=${apks[1]##*/}" >> $GITHUB_ENV
+          # 添加调试输出，验证APK路径
+          echo "DEBUG: APK1_PATH=$APK1_PATH"
+          echo "DEBUG: APK2_PATH=$APK2_PATH"
       - name: 上传第一个APK
         if: ${{ env.APK1_PATH != null && env.APK1_PATH != '' }}
         uses: actions/upload-artifact@v4
@@ -150,6 +131,7 @@ jobs:
 
       - name: 创建发布版本
         if: ${{ !env.SKIP_BUILD }}
+        
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.RELEASE_TAG }}
