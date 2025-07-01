@@ -75,7 +75,7 @@ jobs:
         working-directory: ./project
         run: |
           # 修正正则表达式，正确提取仓库路径
-          PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's|.*/github.com/$$.*$|\\1|')
+          PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's@.*/github.com/@@;s@.git$@@')
           TAGS_URL="https://api.github.com/repos/$PROJECT_PATH/tags"
 
           sudo apt-get update
@@ -83,7 +83,24 @@ jobs:
 
           # 获取最新的标签
           TAG_INFO=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$TAGS_URL")
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Failed to fetch tags from GitHub API"
+            exit 1
+          fi
+          
+          # 验证返回内容是否为JSON
+          echo "$TAG_INFO" | jq empty > /dev/null 2>&1
+          if [ $? -ne 0 ]; then
+            echo "ERROR: Invalid JSON response from GitHub API"
+            echo "Response content: $TAG_INFO"
+            exit 1
+          fi
+          
           LATEST_TAG=$(echo "$TAG_INFO" | jq -r '.[0].name')
+          if [ "$LATEST_TAG" = "null" ] || [ -z "$LATEST_TAG" ]; then
+            echo "ERROR: No tags found in repository"
+            exit 1
+          fi
 
           COMMIT_MSG=$(git log -1 --pretty=%B)
           DESCRIPTION=$(git log -1 --pretty=%B)
