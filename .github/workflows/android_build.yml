@@ -136,7 +136,7 @@ jobs:
           else
             echo "APK2_PATH=" >> $GITHUB_ENV
           fi
-
+        if: ${{ !env.SKIP_BUILD }}
       - name: 创建发布版本
         if: ${{ !env.SKIP_BUILD }}
         uses: softprops/action-gh-release@v1
