@@ -155,6 +155,15 @@ jobs:
             echo "APK2_PATH=${APK_FILES[1]}"
           fi
 
+      - name: 验证APK文件存在性
+        if: ${{ !env.SKIP_BUILD }}
+        run: |
+          echo "当前工作目录: $(pwd)"
+          echo "APK1_PATH内容: ${{ env.APK1_PATH }}"
+          echo "APK1文件是否存在: $([ -f "${{ env.APK1_PATH }}" ] && echo "存在" || echo "不存在")"
+          echo "APK2文件是否存在: $([ -f "${{ env.APK2_PATH }}" ] && echo "存在" || echo "不存在")"
+          ls -la "$(dirname ${{ env.APK1_PATH }})"
+      
       - name: 创建发布版本
         if: ${{ !env.SKIP_BUILD }}
         uses: softprops/action-gh-release@v1
@@ -164,7 +173,7 @@ jobs:
           body: ${{ env.RELEASE_BODY }}
           draft: false
           prerelease: false
-          files:
+          files: |
             ${{ env.APK1_PATH }}
             ${{ env.APK2_PATH }}
           token: ${{ secrets.GITHUB_TOKEN }}
