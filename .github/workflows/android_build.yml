@@ -112,7 +112,6 @@ jobs:
       - name: 获取APK文件路径
         run: |
           APK_SEARCH_PATH="$(pwd)/project"
-          
           # 查找所有APK文件并按修改时间排序
           apks=($(find $APK_SEARCH_PATH -type f -name "*.apk" -exec stat -c "%Y %n" {} \; | sort -nr | head -n 2 | awk '{print $2}'))
           
@@ -132,13 +131,28 @@ jobs:
           echo "DEBUG: 缓存目录内容:"
           ls -la "$(pwd)/apks_cache/"
           
-          # 设置环境变量，直接使用缓存目录中的APK文件
-          APK_FILES=($(ls "$(pwd)/apks_cache/*.apk"))
+          # 设置环境变量，使用find命令安全获取APK文件路径
+          # 移除引号以允许通配符扩展，并添加错误处理
+          shopt -s nullglob  # 启用nullglob，当通配符无匹配时返回空列表
+          APK_FILES=($(pwd)/apks_cache/*.apk)
+          shopt -u nullglob  # 禁用nullglob
+          
+          if [ ${#APK_FILES[@]} -eq 0 ]; then
+            echo "ERROR: 缓存目录中未找到APK文件"
+            exit 1
+          fi
+          
           echo "APK1_PATH=${APK_FILES[0]}" >> $GITHUB_ENV
           if [ ${#APK_FILES[@]} -ge 2 ]; then
             echo "APK2_PATH=${APK_FILES[1]}" >> $GITHUB_ENV
           else
             echo "APK2_PATH=" >> $GITHUB_ENV
+          fi
+
+          echo "DEBUG: 已设置APK路径:"
+          echo "APK1_PATH=${APK_FILES[0]}"
+          if [ ${#APK_FILES[@]} -ge 2 ]; then
+            echo "APK2_PATH=${APK_FILES[1]}"
           fi
 
       - name: 创建发布版本
