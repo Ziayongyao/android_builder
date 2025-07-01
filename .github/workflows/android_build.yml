@@ -71,42 +71,6 @@ jobs:
         run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
         if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
 
-      - name: 配置Gradle缓存
-        uses: actions/cache@v3
-        with:
-          path: ~/.gradle/caches
-          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
-          restore-keys: ${{ runner.os }}-gradle-
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
-
-      - name: 构建应用
-        working-directory: ./project
-        run: |
-          ./gradlew --no-daemon assembleDebug --stacktrace
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
-
-      - name: 获取APK文件路径
-        run: |
-          apks=($(find project -type f -name "*.apk" | head -n 2))
-          echo "APK1_PATH=${apks[0]}" >> $GITHUB_ENV
-          echo "APK2_PATH=${apks[1]}" >> $GITHUB_ENV
-          echo "APK1_NAME=${apks[0]##*/}" >> $GITHUB_ENV
-          echo "APK2_NAME=${apks[1]##*/}" >> $GITHUB_ENV
-
-      - name: 上传第一个APK
-        if: ${{ env.APK1_PATH != null && env.APK1_PATH != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ env.APK1_PATH }}
-          name: ${{ env.APK1_NAME }}
-
-      - name: 上传第二个APK
-        if: ${{ env.APK2_PATH != null && env.APK2_PATH != '' }}
-        uses: actions/upload-artifact@v4
-        with:
-          path: ${{ env.APK2_PATH }}
-          name: ${{ env.APK2_NAME }}
-
       - name: 获取远程仓库信息
         if: ${{ !env.SKIP_BUILD }}
         working-directory: ./project
@@ -129,6 +93,28 @@ jobs:
           echo "RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
           echo "RELEASE_NAME=Build for $LATEST_TAG" >> $GITHUB_ENV
           echo "RELEASE_BODY=$COMMIT_MSG\n\n$DESCRIPTION" >> $GITHUB_ENV
+
+      - name: 配置Gradle缓存
+        uses: actions/cache@v3
+        with:
+          path: ~/.gradle/caches
+          key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
+          restore-keys: ${{ runner.os }}-gradle-
+        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+
+      - name: 构建应用
+        working-directory: ./project
+        run: |
+          ./gradlew --no-daemon assembleDebug --stacktrace
+        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+
+      - name: 获取APK文件路径
+        run: |
+          apks=($(find project -type f -name "*.apk" | head -n 2))
+          echo "APK1_PATH=${apks[0]}" >> $GITHUB_ENV
+          echo "APK2_PATH=${apks[1]}" >> $GITHUB_ENV
+          echo "APK1_NAME=${apks[0]##*/}" >> $GITHUB_ENV
+          echo "APK2_NAME=${apks[1]##*/}" >> $GITHUB_ENV
 
       - name: 创建发布版本
         if: ${{ !env.SKIP_BUILD }}
