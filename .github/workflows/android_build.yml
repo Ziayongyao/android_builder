@@ -75,7 +75,7 @@ jobs:
         working-directory: ./project
         run: |
           # 修正正则表达式，正确提取仓库路径
-          PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's/.*github.com\/$$.*/\1/')
+          PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's|.*/github.com/$$.*$|\\1|')
           TAGS_URL="https://api.github.com/repos/$PROJECT_PATH/tags"
 
           sudo apt-get update
