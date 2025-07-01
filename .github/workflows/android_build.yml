@@ -43,7 +43,7 @@ jobs:
       - name: 获取远程HEAD哈希
         id: get-remote-hash
         run: |
-          REMOTE_HASH=$(git ls-remote ${{ steps.get-project.outputs.project }} HEAD | awk '{print $1}')
+          REMOTE_HASH=$(git ls-remote ${{ env.PROJECT_REPO }}.git HEAD | awk '{print $1}')
           PREVIOUS_HASH=""
           if [ -f previous_hash.txt ]; then
             PREVIOUS_HASH=$(cat previous_hash.txt)
@@ -136,7 +136,7 @@ jobs:
           else
             echo "APK2_PATH=" >> $GITHUB_ENV
           fi
-        if: ${{ !env.SKIP_BUILD }}
+
       - name: 创建发布版本
         if: ${{ !env.SKIP_BUILD }}
         uses: softprops/action-gh-release@v1
