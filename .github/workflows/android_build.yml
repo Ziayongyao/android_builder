@@ -71,11 +71,13 @@ jobs:
         if: ${{ !env.SKIP_BUILD }}
       
       - name: 提取版本信息
-        working-directory: ${{ env.GITHUB_WORKSPACE }}/project
         run: |
           BUILD_GRADLE="app/build.gradle.kts"
-          # 从远程仓库获取最新文件内容
-          git show HEAD:app/build.gradle.kts > $BUILD_GRADLE || exit 1
+          # 从远程仓库直接获取文件内容（不依赖本地克隆）
+          PROJECT_API_URL=$(echo "${{ env.PROJECT_REPO }}" | sed 's@https://github.com/@https://api.github.com/repos/@')
+          curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+               -H "Accept: application/vnd.github.v3.raw" \
+               "$PROJECT_API_URL/contents/$BUILD_GRADLE?ref=main" > $BUILD_GRADLE || exit 1
           
           # 提取版本变量
           major=$(grep -m 1 'val major' $BUILD_GRADLE | awk -F '=' '{print $2}' | tr -d ' ')
