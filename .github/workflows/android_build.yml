@@ -117,7 +117,7 @@ jobs:
           echo "DEBUG: 当前目录结构:"
           find project -type d -name "*.apk" -o -name "apk" | sort
 
-          # 删除原限制性目录查找，改为递归查找所有子目录
+          # 删除原限制性目录查找，改为递归查找所有子目录中的APK文件
           # 新增：递归查找所有子目录中的APK文件
           apks=($(find project -type f -name "*.apk" 2>/dev/null | sort -r | head -n 2))
           
@@ -129,10 +129,16 @@ jobs:
             exit 1
           fi
 
+          # 提取文件名并替换非法字符
+          APK1_NAME="${apks[0]##*/}"
+          APK1_NAME="${APK1_NAME//\//_}"
+          APK2_NAME="${apks[1]##*/}"
+          APK2_NAME="${APK2_NAME//\//_}"
+
           echo "APK1_PATH=${apks[0]}" >> $GITHUB_ENV
           echo "APK2_PATH=${apks[1]:-}" >> $GITHUB_ENV
-          echo "APK1_NAME=${apks[0]##*/}" >> $GITHUB_ENV
-          echo "APK2_NAME=${apks[1]##*/:-}" >> $GITHUB_ENV
+          echo "APK1_NAME=${APK1_NAME}" >> $GITHUB_ENV
+          echo "APK2_NAME=${APK2_NAME}" >> $GITHUB_ENV
           echo "DEBUG: 找到${#apks[@]}个APK文件，路径分别为：${apks[0]} 和 ${apks[1]:-无}"
 
       - name: 上传第一个APK
