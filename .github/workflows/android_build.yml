@@ -1,38 +1,47 @@
 name: android_build
+
 on:
   schedule:
-    - cron: '0 */6 * * *'
+    - cron: '0 */6 * * *'  # 每6小时执行一次
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
+    permissions:  # 新增权限配置（关键修改）
+      contents: write  # 创建release需要写入权限
     env:
-      PROJECT_REPO: https://github.com/Fansirsqi/Sesame-TK
+      # 新增全局环境变量定义
+      PROJECT_REPO: https://github.com/Fansirsqi/Sesame-TK  # 项目仓库地址变量
+
     steps:
-      - name: Set up JDK
+      - name: 设置JDK
         uses: actions/setup-java@v3
         with:
           distribution: 'temurin'
           java-version: 17
-      - name: Create project-to-build file
+
+      - name: 创建项目构建文件
         run: |
+          # 使用环境变量写入文件
           echo "$PROJECT_REPO" > project-to-build
-      - name: Get project name
+
+      - name: 获取项目名称
         id: get-project
         run: |
           PROJECT=$(cat project-to-build)
           echo "project=$PROJECT" >> $GITHUB_OUTPUT
-      - name: Restore previous hash from cache
+
+      - name: 从缓存恢复先前哈希
         uses: actions/cache@v3
         with:
           path: previous_hash.txt
           key: ${{ steps.get-project.outputs.project }}-hash
           restore-keys: |
             ${{ steps.get-project.outputs.project }}-hash
-        continue-on-error: true
-      - name: Get remote HEAD hash
+        continue-on-error: true  # 新增：允许缓存未命中时继续执行
+
+      - name: 获取远程HEAD哈希
         id: get-remote-hash
         run: |
           REMOTE_HASH=$(git ls-remote ${{ steps.get-project.outputs.project }} HEAD | awk '{print $1}')
@@ -40,75 +49,98 @@ jobs:
           if [ -f previous_hash.txt ]; then
             PREVIOUS_HASH=$(cat previous_hash.txt)
           fi
+
           if [ "$REMOTE_HASH" = "$PREVIOUS_HASH" ]; then
             echo "No new commits since last check. Skipping workflow."
             echo "SKIP_BUILD=1" >> $GITHUB_ENV
+            exit 0  # 新增：直接终止当前步骤
           else
             echo "New commit detected. Proceeding with build."
             echo "$REMOTE_HASH" > previous_hash.txt
           fi
-      - name: Save current hash to cache
+
+      - name: 保存当前哈希到缓存
         uses: actions/cache@v3
         with:
           path: previous_hash.txt
           key: ${{ steps.get-project.outputs.project }}-hash
           restore-keys: ''
-        if: ${{ !env.SKIP_BUILD }}
-      - name: Clone project
+        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+
+      - name: 克隆项目
         run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
-        if: ${{ !env.SKIP_BUILD }}
-      - name: Setup Gradle cache
+        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+
+      - name: 配置Gradle缓存
         uses: actions/cache@v3
         with:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle-
-        if: ${{ !env.SKIP_BUILD }}
-      - name: Build the app
+        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+
+      - name: 构建应用
         working-directory: ./project
         run: |
           ./gradlew --no-daemon assembleDebug --stacktrace
-        if: ${{ !env.SKIP_BUILD }}
-      - name: Get APK file paths
+        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+
+      - name: 获取APK文件路径
         run: |
           apks=($(find project -type f -name "*.apk" | head -n 2))
           echo "APK1_PATH=${apks[0]}" >> $GITHUB_ENV
           echo "APK2_PATH=${apks[1]}" >> $GITHUB_ENV
           echo "APK1_NAME=${apks[0]##*/}" >> $GITHUB_ENV
           echo "APK2_NAME=${apks[1]##*/}" >> $GITHUB_ENV
-      - name: Upload First APK
+
+      - name: 上传第一个APK
         if: ${{ env.APK1_PATH != null && env.APK1_PATH != '' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.APK1_PATH }}
           name: ${{ env.APK1_NAME }}
-      - name: Upload Second APK
+
+      - name: 上传第二个APK
         if: ${{ env.APK2_PATH != null && env.APK2_PATH != '' }}
         uses: actions/upload-artifact@v4
         with:
           path: ${{ env.APK2_PATH }}
           name: ${{ env.APK2_NAME }}
-      - name: Get remote repository info
+
+      - name: 获取远程仓库信息
         if: ${{ !env.SKIP_BUILD }}
-        working-directory: ./project
+        working-directory: ./project  # 新增：指定工作目录为克隆的项目目录
         run: |
+          # 使用环境变量动态构造API地址
           PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's/.*github.com\/\(.*\)/\1/')
           API_URL="https://api.github.com/repos/$PROJECT_PATH"
+          
+          # 安装 jq 用于解析 JSON
           sudo apt-get update
           sudo apt-get install -y jq
+
+          # 使用动态构造的API地址
           REPO_INFO=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
+          
           LATEST_TAG=$(echo "$REPO_INFO" | jq -r '.default_branch')
-          COMMIT_MSG=$(git log -1 --pretty=%B)
+          COMMIT_MSG=$(git log -1 --pretty=%B)  # 此时已在项目目录中执行
+          DESCRIPTION=$(echo "$REPO_INFO" | jq -r '.description')
+
           echo "RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
           echo "RELEASE_NAME=Build for $LATEST_TAG" >> $GITHUB_ENV
           echo "RELEASE_BODY=$COMMIT_MSG\n\n$DESCRIPTION" >> $GITHUB_ENV
-      - name: Create Release
-        if: ${{ !env.SKIP_BUILD }}
+
+      - name: 创建发布版本
+        if: ${{ !env.SKIP_BUILD }}  # 恢复条件判断（取消注释）
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ env.RELEASE_TAG }}
-          release_name: ${{ env.RELEASE_NAME }}
+          release_name: ${{ env.RELEASE_NAME }} #错误：名字为main   
           body: ${{ env.RELEASE_BODY }}
           draft: false
           prerelease: false
+          
+          files: |  # 新增APK文件作为发布资产
+            - ${{ env.APK1_PATH }}
+            - ${{ env.APK2_PATH }}
           token: ${{ secrets.GITHUB_TOKEN }}
