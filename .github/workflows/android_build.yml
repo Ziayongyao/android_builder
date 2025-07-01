@@ -8,11 +8,10 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    permissions:  # 新增权限配置（关键修改）
-      contents: write  # 创建release需要写入权限
+    permissions:
+      contents: write
     env:
-      # 新增全局环境变量定义
-      PROJECT_REPO: https://github.com/Fansirsqi/Sesame-TK  # 项目仓库地址变量
+      PROJECT_REPO: https://github.com/Fansirsqi/Sesame-TK
 
     steps:
       - name: 设置JDK
@@ -23,13 +22,13 @@ jobs:
 
       - name: 创建项目构建文件
         run: |
-          # 使用环境变量写入文件
           echo "$PROJECT_REPO" > project-to-build
 
       - name: 获取项目名称
         id: get-project
         run: |
-          PROJECT=$(cat project-to-build)
+          # 提取仓库短名称作为缓存key
+          PROJECT=$(cat project-to-build | sed 's/.*github.com.///;s/.git$//')
           echo "project=$PROJECT" >> $GITHUB_OUTPUT
 
       - name: 从缓存恢复先前哈希
@@ -39,7 +38,7 @@ jobs:
           key: ${{ steps.get-project.outputs.project }}-hash
           restore-keys: |
             ${{ steps.get-project.outputs.project }}-hash
-        continue-on-error: true  # 新增：允许缓存未命中时继续执行
+        continue-on-error: true
 
       - name: 获取远程HEAD哈希
         id: get-remote-hash
@@ -49,15 +48,11 @@ jobs:
           if [ -f previous_hash.txt ]; then
             PREVIOUS_HASH=$(cat previous_hash.txt)
           fi
-          # 新增：输出哈希值用于调试
-          echo "REMOTE_HASH=$REMOTE_HASH"
-          echo "PREVIOUS_HASH=$PREVIOUS_HASH"
-
 
           if [ "$REMOTE_HASH" = "$PREVIOUS_HASH" ]; then
             echo "No new commits since last check. Skipping workflow."
             echo "SKIP_BUILD=1" >> $GITHUB_ENV
-            exit 0  # 新增：直接终止当前步骤
+            exit 0
           else
             echo "New commit detected. Proceeding with build."
             echo "$REMOTE_HASH" > previous_hash.txt
@@ -69,7 +64,7 @@ jobs:
           path: previous_hash.txt
           key: ${{ steps.get-project.outputs.project }}-hash
           restore-keys: ''
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+        if: ${{ !env.SKIP_BUILD }}
 
       - name: 克隆项目
         run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
@@ -79,17 +74,19 @@ jobs:
         if: ${{ !env.SKIP_BUILD }}
         working-directory: ./project
         run: |
-          PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's/.*github.com\/\(.*\)/\1/')
-          API_URL="https://api.github.com/repos/$PROJECT_PATH"
-          
+          # 修正正则表达式，正确提取仓库路径
+          PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's/.*github.com\/$$.*/\1/')
+          TAGS_URL="https://api.github.com/repos/$PROJECT_PATH/tags"
+
           sudo apt-get update
           sudo apt-get install -y jq
 
-          REPO_INFO=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
-          
-          LATEST_TAG=$(echo "$REPO_INFO" | jq -r '.default_branch')
+          # 获取最新的标签
+          TAG_INFO=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$TAGS_URL")
+          LATEST_TAG=$(echo "$TAG_INFO" | jq -r '.[0].name')
+
           COMMIT_MSG=$(git log -1 --pretty=%B)
-          DESCRIPTION=$(echo "$REPO_INFO" | jq -r '.description')
+          DESCRIPTION=$(git log -1 --pretty=%B)
 
           echo "RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
           echo "RELEASE_NAME=Build for $LATEST_TAG" >> $GITHUB_ENV
@@ -106,13 +103,12 @@ jobs:
       - name: 构建应用
         working-directory: ./project
         run: |
-          ./gradlew --no-daemon assembleDebug --stacktrace
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
+          ./gradlew --no-daemon assembleDebug
+        if: ${{ !env.SKIP_BUILD }}
 
       - name: 获取APK文件路径
         run: |
           APK_SEARCH_PATH="$(pwd)/project"
-          # 查找所有APK文件并按修改时间排序
           apks=($(find $APK_SEARCH_PATH -type f -name "*.apk" -exec stat -c "%Y %n" {} \; | sort -nr | head -n 2 | awk '{print $2}'))
           
           if [ ${#apks[@]} -eq 0 ]; then
@@ -120,22 +116,14 @@ jobs:
             exit 1
           fi
           
-          # 创建缓存目录并复制APK文件
           mkdir -p "$(pwd)/apks_cache"
           for apk in "${apks[@]}"; do
             cp -f "$apk" "$(pwd)/apks_cache/"
-            echo "DEBUG: 已复制APK文件: $apk"
           done
           
-          # 列出缓存目录内容进行调试
-          echo "DEBUG: 缓存目录内容:"
-          ls -la "$(pwd)/apks_cache/"
-          
-          # 设置环境变量，使用find命令安全获取APK文件路径
-          # 移除引号以允许通配符扩展，并添加错误处理
-          shopt -s nullglob  # 启用nullglob，当通配符无匹配时返回空列表
+          shopt -s nullglob
           APK_FILES=($(pwd)/apks_cache/*.apk)
-          shopt -u nullglob  # 禁用nullglob
+          shopt -u nullglob
           
           if [ ${#APK_FILES[@]} -eq 0 ]; then
             echo "ERROR: 缓存目录中未找到APK文件"
@@ -149,21 +137,6 @@ jobs:
             echo "APK2_PATH=" >> $GITHUB_ENV
           fi
 
-          echo "DEBUG: 已设置APK路径:"
-          echo "APK1_PATH=${APK_FILES[0]}"
-          if [ ${#APK_FILES[@]} -ge 2 ]; then
-            echo "APK2_PATH=${APK_FILES[1]}"
-          fi
-
-      - name: 验证APK文件存在性
-        if: ${{ !env.SKIP_BUILD }}
-        run: |
-          echo "当前工作目录: $(pwd)"
-          echo "APK1_PATH内容: ${{ env.APK1_PATH }}"
-          echo "APK1文件是否存在: $([ -f "${{ env.APK1_PATH }}" ] && echo "存在" || echo "不存在")"
-          echo "APK2文件是否存在: $([ -f "${{ env.APK2_PATH }}" ] && echo "存在" || echo "不存在")"
-          ls -la "$(dirname ${{ env.APK1_PATH }})"
-      
       - name: 创建发布版本
         if: ${{ !env.SKIP_BUILD }}
         uses: softprops/action-gh-release@v1
