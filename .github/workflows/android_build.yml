@@ -70,44 +70,28 @@ jobs:
         run: git clone --depth=1 ${{ env.PROJECT_REPO }}.git project
         if: ${{ !env.SKIP_BUILD }}
       
-      - name: 获取远程仓库信息
-        if: ${{ !env.SKIP_BUILD }}
+      - name: 提取版本信息
         working-directory: ./project
         run: |
-          # 修正正则表达式，正确提取仓库路径
-          PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's@.*/github.com/@@;s@.git$@@')
-          TAGS_URL="https://api.github.com/repos/$PROJECT_PATH/tags"
-
-          sudo apt-get update
-          sudo apt-get install -y jq
-
-          # 获取最新的标签
-          TAG_INFO=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$TAGS_URL")
-          if [ $? -ne 0 ]; then
-            echo "ERROR: Failed to fetch tags from GitHub API"
-            exit 1
-          fi
-          
-          # 验证返回内容是否为JSON
-          echo "$TAG_INFO" | jq empty > /dev/null 2>&1
-          if [ $? -ne 0 ]; then
-            echo "ERROR: Invalid JSON response from GitHub API"
-            echo "Response content: $TAG_INFO"
-            exit 1
-          fi
-          
-          LATEST_TAG=$(echo "$TAG_INFO" | jq -r '.[0].name')
-          if [ "$LATEST_TAG" = "null" ] || [ -z "$LATEST_TAG" ]; then
-            echo "ERROR: No tags found in repository"
+          BUILD_GRADLE="app/build.gradle.kts"
+          if [ ! -f "$BUILD_GRADLE" ]; then
+            echo "ERROR: $BUILD_GRADLE not found"
             exit 1
           fi
 
-          COMMIT_MSG=$(git log -1 --pretty=%B)
-          DESCRIPTION=$(git log -1 --pretty=%B)
+          # 提取版本变量
+          major=$(grep -m 1 'val major' $BUILD_GRADLE | awk -F '=' '{print $2}' | tr -d ' ')
+          minor=$(grep -m 1 'val minor' $BUILD_GRADLE | awk -F '=' '{print $2}' | tr -d ' ')
+          patch=$(grep -m 1 'val patch' $BUILD_GRADLE | awk -F '=' '{print $2}' | tr -d ' ')
+          buildTag=$(grep -m 1 'val buildTag' $BUILD_GRADLE | awk -F '=' '{print $2}' | sed 's/[" ]//g')
 
+          # 构造标签
+          LATEST_TAG="$major.$minor.$patch-$buildTag"
+
+          # 输出到环境变量
           echo "RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
           echo "RELEASE_NAME=Build for $LATEST_TAG" >> $GITHUB_ENV
-          echo "RELEASE_BODY=$COMMIT_MSG\n\n$DESCRIPTION" >> $GITHUB_ENV
+          echo "RELEASE_BODY=Automated build for version $LATEST_TAG" >> $GITHUB_ENV
 
       - name: 配置Gradle缓存
         uses: actions/cache@v3
