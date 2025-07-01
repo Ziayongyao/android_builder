@@ -164,7 +164,7 @@ jobs:
           body: ${{ env.RELEASE_BODY }}
           draft: false
           prerelease: false
-          files: |
-            - ${{ env.APK1_PATH }}
-            - ${{ env.APK2_PATH }}
+          files:
+            ${{ env.APK1_PATH }}
+            ${{ env.APK2_PATH }}
           token: ${{ secrets.GITHUB_TOKEN }}
