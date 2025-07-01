@@ -69,25 +69,22 @@ jobs:
 
       - name: 克隆项目
         run: git clone --depth=1 ${{ steps.get-project.outputs.project }} project
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
-
+        if: ${{ !env.SKIP_BUILD }}
+      
       - name: 获取远程仓库信息
         if: ${{ !env.SKIP_BUILD }}
         working-directory: ./project
         run: |
-          # 使用环境变量动态构造API地址
           PROJECT_PATH=$(echo "$PROJECT_REPO" | sed 's/.*github.com\/\(.*\)/\1/')
           API_URL="https://api.github.com/repos/$PROJECT_PATH"
           
-          # 安装 jq 用于解析 JSON
           sudo apt-get update
           sudo apt-get install -y jq
 
-          # 使用动态构造的API地址
           REPO_INFO=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$API_URL")
           
           LATEST_TAG=$(echo "$REPO_INFO" | jq -r '.default_branch')
-          COMMIT_MSG=$(git log -1 --pretty=%B)  # 此时已在项目目录中执行
+          COMMIT_MSG=$(git log -1 --pretty=%B)
           DESCRIPTION=$(echo "$REPO_INFO" | jq -r '.description')
 
           echo "RELEASE_TAG=$LATEST_TAG" >> $GITHUB_ENV
@@ -100,8 +97,8 @@ jobs:
           path: ~/.gradle/caches
           key: ${{ runner.os }}-gradle-${{ hashFiles('**/*.gradle') }}
           restore-keys: ${{ runner.os }}-gradle-
-        if: ${{ !env.SKIP_BUILD }}  # 新增：仅当未跳过时执行
-
+        if: ${{ !env.SKIP_BUILD }}
+      
       - name: 构建应用
         working-directory: ./project
         run: |
@@ -116,6 +113,20 @@ jobs:
           echo "APK1_NAME=${apks[0]##*/}" >> $GITHUB_ENV
           echo "APK2_NAME=${apks[1]##*/}" >> $GITHUB_ENV
 
+      - name: 上传第一个APK
+        if: ${{ env.APK1_PATH != null && env.APK1_PATH != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          path: ${{ env.APK1_PATH }}
+          name: ${{ env.APK1_NAME }}
+
+      - name: 上传第二个APK
+        if: ${{ env.APK2_PATH != null && env.APK2_PATH != '' }}
+        uses: actions/upload-artifact@v4
+        with:
+          path: ${{ env.APK2_PATH }}
+          name: ${{ env.APK2_NAME }}
+
       - name: 创建发布版本
         if: ${{ !env.SKIP_BUILD }}
         uses: softprops/action-gh-release@v1
@@ -125,7 +136,6 @@ jobs:
           body: ${{ env.RELEASE_BODY }}
           draft: false
           prerelease: false
-          
           files: |
             - ${{ env.APK1_PATH }}
             - ${{ env.APK2_PATH }}
