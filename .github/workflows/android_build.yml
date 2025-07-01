@@ -116,15 +116,32 @@ jobs:
           fi
         if: ${{ !env.SKIP_BUILD }}
 
-      - name: 提取版本信息
+      # 新增: 从APK提取版本标签
+      - name: 从APK提取版本标签
         run: |
-          # 使用aapt2从APK文件中提取versionName
-          VERSION_NAME=$(aapt2 dump badging "${{ env.APK1_PATH }}" | grep versionName | sed "s/.*versionName='\([^']*\)'.*/\1/")
+          # 安装aapt2工具
+          sudo apt-get -qq update
+          sudo apt-get -qq install -y aapt
           
-          # 构造标签和发布信息
-          echo "RELEASE_TAG=v$VERSION_NAME" >> $GITHUB_ENV
+          # 从APK提取版本名称
+          VERSION_NAME=$(aapt dump badging ${{ env.APK1_PATH }} | grep "versionName" | awk -F"'" '{print $2}')
+          echo "RELEASE_TAG=$VERSION_NAME" >> $GITHUB_ENV
           echo "RELEASE_NAME=Build for $VERSION_NAME" >> $GITHUB_ENV
-          echo "RELEASE_BODY=Automated build for version $VERSION_NAME" >> $GITHUB_ENV
+        if: ${{ !env.SKIP_BUILD }}
+
+      # 新增: 从远程仓库获取最新提交信息
+      - name: 获取最新提交信息
+        run: |
+          # 获取最新提交的主题和描述
+          PROJECT_API_URL=$(echo "${{ env.PROJECT_REPO }}" | sed 's@.*github.com.@@;s@.git$@@;s@^@https://api.github.com/repos/@')
+          COMMIT_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "$PROJECT_API_URL/commits?per_page=1" | jq -r '.[0]')
+          
+          COMMIT_SUBJECT=$(echo $COMMIT_DATA | jq -r '.commit.message | split("\n")[0]')
+          COMMIT_BODY=$(echo $COMMIT_DATA | jq -r '.commit.message | sub(".*?\n"; "")')
+          
+          # 设置发布描述
+          echo "RELEASE_BODY=### 最新提交: $COMMIT_SUBJECT\n$COMMIT_BODY\n\nAutomated build for version ${{ env.RELEASE_TAG }}" >> $GITHUB_ENV
         if: ${{ !env.SKIP_BUILD }}
 
       - name: 创建发布版本
