@@ -116,20 +116,20 @@ jobs:
           fi
         if: ${{ !env.SKIP_BUILD }}
 
-      # 新增: 从APK提取版本标签
+      # 从APK提取版本标签
       - name: 从APK提取版本标签
         run: |
-          # 安装aapt2工具
+          # 安装aapt工具
           sudo apt-get -qq update
           sudo apt-get -qq install -y aapt
           
-          # 从APK提取版本名称
-          VERSION_NAME=$(aapt dump badging ${{ env.APK1_PATH }} | grep "versionName" | awk -F"'" '{print $2}')
+          # 使用sed完整提取versionName单引号内的全部内容
+          VERSION_NAME=$(aapt dump badging "${{ env.APK1_PATH }}" | grep "versionName" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
           echo "RELEASE_TAG=$VERSION_NAME" >> $GITHUB_ENV
           echo "RELEASE_NAME=Build for $VERSION_NAME" >> $GITHUB_ENV
         if: ${{ !env.SKIP_BUILD }}
 
-      # 新增: 从远程仓库获取最新提交信息
+      # 从远程仓库获取最新提交信息
       - name: 获取最新提交信息
         run: |
           # 获取最新提交的主题和描述
