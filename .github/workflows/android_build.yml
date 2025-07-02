@@ -144,15 +144,23 @@ jobs:
           COMMIT_DATE=$(echo $COMMIT_DATA | jq -r '.commit.author.date')
           COMMIT_URL=$(echo $COMMIT_DATA | jq -r '.html_url')
           
-          # 设置美化后的发布描述
-          echo "RELEASE_BODY=### 🚀 最新提交: [$COMMIT_SUBJECT]($COMMIT_URL)\n\n" \
-               "**作者**: $COMMIT_AUTHOR  \n" \
-               "**时间**: $COMMIT_DATE  \n\n" \
-               "**提交内容**:\n$COMMIT_BODY\n\n" \
-               "---\n\n" \
-               "🔧 **自动化构建信息**  \n" \
-               "- 版本: ${{ env.RELEASE_TAG }}\n" \
-               "- 构建时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')" >> $GITHUB_ENV
+          # 使用 heredoc 设置多行环境变量（解决换行问题）
+          cat <<EOF >> $GITHUB_ENV
+          RELEASE_BODY=
+          ### 🚀 最新提交: [$COMMIT_SUBJECT]($COMMIT_URL)
+          
+          **作者**: $COMMIT_AUTHOR  
+          **时间**: $COMMIT_DATE  
+          
+          **提交内容**:  
+          $COMMIT_BODY
+          
+          ---
+          
+          🔧 **自动化构建信息**  
+          - 版本: ${{ env.RELEASE_TAG }}
+          - 构建时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          EOF
         if: ${{ !env.SKIP_BUILD }}
 
       - name: 创建发布版本
