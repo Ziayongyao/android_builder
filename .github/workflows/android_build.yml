@@ -139,14 +139,13 @@ jobs:
           
           COMMIT_SUBJECT=$(echo $COMMIT_DATA | jq -r '.commit.message | split("\n")[0]')
           COMMIT_BODY=$(echo $COMMIT_DATA | jq -r '.commit.message | sub(".*?\n"; "")')
-          # 新增：提取作者和提交时间
           COMMIT_AUTHOR=$(echo $COMMIT_DATA | jq -r '.commit.author.name')
           COMMIT_DATE=$(echo $COMMIT_DATA | jq -r '.commit.author.date')
           COMMIT_URL=$(echo $COMMIT_DATA | jq -r '.html_url')
           
-          # 使用 heredoc 设置多行环境变量（解决换行问题）
+          # 修复：使用正确的heredoc语法设置多行环境变量
           cat <<EOF >> $GITHUB_ENV
-          RELEASE_BODY=
+          RELEASE_BODY<<EOF
           ### 🚀 最新提交: [$COMMIT_SUBJECT]($COMMIT_URL)
           
           **作者**: $COMMIT_AUTHOR  
