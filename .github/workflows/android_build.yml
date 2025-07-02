@@ -144,7 +144,7 @@ jobs:
           COMMIT_URL=$(echo $COMMIT_DATA | jq -r '.html_url')
           
           # 修复：使用正确的heredoc语法设置多行环境变量
-          cat <<EOF >> $GITHUB_ENV
+          cat <<EOR >> $GITHUB_ENV
           RELEASE_BODY<<EOF
           ### 🚀 最新提交: [$COMMIT_SUBJECT]($COMMIT_URL)
           
@@ -160,6 +160,7 @@ jobs:
           - 版本: ${{ env.RELEASE_TAG }}
           - 构建时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
           EOF
+          EOR
         if: ${{ !env.SKIP_BUILD }}
 
       - name: 创建发布版本
