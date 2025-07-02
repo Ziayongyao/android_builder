@@ -2,7 +2,7 @@ name: android_build
 
 on:
   schedule:
-    - cron: '0 0 * * *'  # 每6小时执行一次
+    - cron: '0 */6 * * *'  # 每6小时执行一次
   workflow_dispatch:
 
 jobs:
@@ -14,9 +14,6 @@ jobs:
       PROJECT_REPO: https://github.com/Fansirsqi/Sesame-TK
 
     steps:
-      - name: 设置时区
-        run: sudo timedatectl set-timezone Asia/Shanghai
-
       - name: 设置JDK
         uses: actions/setup-java@v3
         with:
@@ -92,6 +89,11 @@ jobs:
           APK_SEARCH_PATH="$(pwd)/project"
           apks=($(find $APK_SEARCH_PATH -type f -name "*.apk" -exec stat -c "%Y %n" {} \; | sort -nr | head -n 2 | awk '{print $2}'))
           
+          if [ ${#apks[@]} -eq 0 ]; then
+            echo "ERROR: 未找到任何APK文件"
+            exit 1
+          fi
+          
           mkdir -p "$(pwd)/apks_cache"
           for apk in "${apks[@]}"; do
             cp -f "$apk" "$(pwd)/apks_cache/"
@@ -101,6 +103,11 @@ jobs:
           APK_FILES=($(pwd)/apks_cache/*.apk)
           shopt -u nullglob
           
+          if [ ${#APK_FILES[@]} -eq 0 ]; then
+            echo "ERROR: 缓存目录中未找到APK文件"
+            exit 1
+          fi
+          
           echo "APK1_PATH=${APK_FILES[0]}" >> $GITHUB_ENV
           if [ ${#APK_FILES[@]} -ge 2 ]; then
             echo "APK2_PATH=${APK_FILES[1]}" >> $GITHUB_ENV
@@ -109,20 +116,23 @@ jobs:
           fi
         if: ${{ !env.SKIP_BUILD }}
 
+      # 从APK提取版本标签
       - name: 从APK提取版本标签
         run: |
           # 安装aapt工具
           sudo apt-get -qq update
           sudo apt-get -qq install -y aapt
-
+          
+          # 使用sed完整提取versionName单引号内的全部内容
           VERSION_NAME=$(aapt dump badging "${{ env.APK1_PATH }}" | grep "versionName" | sed -n "s/.*versionName='\([^']*\)'.*/\1/p")
           echo "RELEASE_TAG=$VERSION_NAME" >> $GITHUB_ENV
           echo "RELEASE_NAME=v$VERSION_NAME" >> $GITHUB_ENV
         if: ${{ !env.SKIP_BUILD }}
 
-      - name: 创建发布信息
+      # 从远程仓库获取最新提交信息
+      - name: 获取最新提交信息
         run: |
-          # 从远程仓库获取最新提交信息
+          # 获取最新提交的主题和描述
           PROJECT_API_URL=$(echo "${{ env.PROJECT_REPO }}" | sed 's@.*github.com.@@;s@.git$@@;s@^@https://api.github.com/repos/@')
           COMMIT_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
             "$PROJECT_API_URL/commits?per_page=1" | jq -r '.[0]')
@@ -133,13 +143,13 @@ jobs:
           COMMIT_DATE=$(echo $COMMIT_DATA | jq -r '.commit.author.date')
           COMMIT_URL=$(echo $COMMIT_DATA | jq -r '.html_url')
           
-          # 发布信息
-          cat <<EOR >> $GITHUB_ENV
+          # 修复：使用正确的heredoc语法设置多行环境变量
+          cat <<EOF >> $GITHUB_ENV
           RELEASE_BODY<<EOF
           ### 🚀 最新提交: [$COMMIT_SUBJECT]($COMMIT_URL)
           
-          **提交作者**: $COMMIT_AUTHOR  
-          **提交时间**: $COMMIT_DATE  
+          **作者**: $COMMIT_AUTHOR  
+          **时间**: $COMMIT_DATE  
           
           **提交内容**:  
           $COMMIT_BODY
@@ -148,9 +158,8 @@ jobs:
           
           🔧 **自动化构建信息**  
           - 版本: ${{ env.RELEASE_TAG }}
-          - 构建时间: $(date -u '+%Y-%m-%d %H:%M:%S UTC')
+          - 构建时间: $(date '+%Y-%m-%d %H:%M:%S %Z')
           EOF
-          EOR
         if: ${{ !env.SKIP_BUILD }}
 
       - name: 创建发布版本
