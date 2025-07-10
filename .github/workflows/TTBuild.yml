@@ -132,32 +132,38 @@ jobs:
       # 从远程仓库获取最新提交信息
       - name: 获取最新提交信息
         run: |
-          sudo apt-get install -y jq
+          # 获取最新提交的主题和描述
           PROJECT_API_URL=$(echo "${{ env.PROJECT_REPO }}" | sed 's@.*github.com.@@;s@.git$@@;s@^@https://api.github.com/repos/@')
-          COMMIT_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" "$PROJECT_API_URL/commits?per_page=1" | jq -r '.[0]')
-    
-          COMMIT_SUBJECT=$(echo "$COMMIT_DATA" | jq -r '.commit.message | split("\n")[0]')
-          COMMIT_BODY=$(echo "$COMMIT_DATA" | jq -r '.commit.message | sub(".*?\n"; "")')
-          COMMIT_AUTHOR=$(echo "$COMMIT_DATA" | jq -r '.commit.author.name')
-          COMMIT_DATE=$(echo "$COMMIT_DATA" | jq -r '.commit.author.date')
-          COMMIT_URL=$(echo "$COMMIT_DATA" | jq -r '.html_url')
-    
+          COMMIT_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
+            "$PROJECT_API_URL/commits?per_page=1" | jq -r '.[0]')
+          
+          COMMIT_SUBJECT=$(echo $COMMIT_DATA | jq -r '.commit.message | split("\n")[0]')
+          COMMIT_BODY=$(echo $COMMIT_DATA | jq -r '.commit.message | sub(".*?\n"; "")')
+          COMMIT_AUTHOR=$(echo $COMMIT_DATA | jq -r '.commit.author.name')
+          COMMIT_DATE=$(echo $COMMIT_DATA | jq -r '.commit.author.date')
+          COMMIT_URL=$(echo $COMMIT_DATA | jq -r '.html_url')
+          
+          # 修复：使用临时文件生成规范的JSON字符串
           cat <<EOF > release_body.tmp
-            ### 🚀 最新提交: [$COMMIT_SUBJECT]($COMMIT_URL)  
-            **作者**: $COMMIT_AUTHOR  
-            **时间**: $COMMIT_DATE  
-            **提交内容**:  
-            $COMMIT_BODY  
-            ---  
-            🔧 **自动化构建信息**  
-            - 版本: ${{ env.RELEASE_TAG }}  
-            - 构建时间: $(date '+%Y-%m-%d %H:%M:%S %Z')  
+          ### 🚀 最新提交: [$COMMIT_SUBJECT]($COMMIT_URL)
+          
+          **作者**: $COMMIT_AUTHOR  
+          **时间**: $COMMIT_DATE  
+          
+          **提交内容**:  
+          $COMMIT_BODY
+          
+          ---
+          
+          🔧 **自动化构建信息**  
+          - 版本: ${{ env.RELEASE_TAG }}
+          - 构建时间: $(date '+%Y-%m-%d %H:%M:%S %Z')
           EOF
-  
-          # 使用 jq 转义内容
-          RELEASE_BODY_JSON=$(jq -sRr @text release_body.tmp)
+          
+          # 使用sed处理换行符并生成JSON兼容字符串
+          RELEASE_BODY_JSON=$(sed ':a;N;$!ba;s/\n/\\n/g' release_body.tmp)
           echo "RELEASE_BODY=$RELEASE_BODY_JSON" >> $GITHUB_ENV
- 
+        if: ${{ !env.SKIP_BUILD }}
 
       - name: 创建发布版本
         if: ${{ !env.SKIP_BUILD }}
