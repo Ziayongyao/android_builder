@@ -143,9 +143,8 @@ jobs:
           COMMIT_DATE=$(echo $COMMIT_DATA | jq -r '.commit.author.date')
           COMMIT_URL=$(echo $COMMIT_DATA | jq -r '.html_url')
           
-          # 修复：使用正确的heredoc语法设置多行环境变量
-          cat <<EOF >> $GITHUB_ENV
-          RELEASE_BODY<<EOF
+          # 修复：使用临时文件生成规范的JSON字符串
+          cat <<EOF > release_body.tmp
           ### 🚀 最新提交: [$COMMIT_SUBJECT]($COMMIT_URL)
           
           **作者**: $COMMIT_AUTHOR  
@@ -160,6 +159,10 @@ jobs:
           - 版本: ${{ env.RELEASE_TAG }}
           - 构建时间: $(date '+%Y-%m-%d %H:%M:%S %Z')
           EOF
+          
+          # 使用sed处理换行符并生成JSON兼容字符串
+          RELEASE_BODY_JSON=$(sed ':a;N;$!ba;s/\n/\\n/g' release_body.tmp)
+          echo "RELEASE_BODY=$RELEASE_BODY_JSON" >> $GITHUB_ENV
         if: ${{ !env.SKIP_BUILD }}
 
       - name: 创建发布版本
