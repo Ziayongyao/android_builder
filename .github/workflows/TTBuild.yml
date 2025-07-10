@@ -129,41 +129,51 @@ jobs:
           echo "RELEASE_NAME=v$VERSION_NAME" >> $GITHUB_ENV
         if: ${{ !env.SKIP_BUILD }}
 
-      # 从远程仓库获取最新提交信息
-      - name: 获取最新提交信息
+      # 替换原有的获取最新提交信息步骤
+      - name: 提取提交信息并生成发布内容
+        if: ${{ !env.SKIP_BUILD }}
         run: |
-          # 获取最新提交的主题和描述
-          PROJECT_API_URL=$(echo "${{ env.PROJECT_REPO }}" | sed 's@.*github.com.@@;s@.git$@@;s@^@https://api.github.com/repos/@')
-          COMMIT_DATA=$(curl -s -H "Authorization: Bearer ${{ secrets.GITHUB_TOKEN }}" \
-            "$PROJECT_API_URL/commits?per_page=1" | jq -r '.[0]')
+          # 获取简短提交哈希
+          COMMIT_HASH=$(git rev-parse --short HEAD 2>/dev/null || echo "unknown")
           
-          COMMIT_SUBJECT=$(echo $COMMIT_DATA | jq -r '.commit.message | split("\n")[0]')
-          COMMIT_BODY=$(echo $COMMIT_DATA | jq -r '.commit.message | sub(".*?\n"; "")')
-          COMMIT_AUTHOR=$(echo $COMMIT_DATA | jq -r '.commit.author.name')
-          COMMIT_DATE=$(echo $COMMIT_DATA | jq -r '.commit.author.date')
-          COMMIT_URL=$(echo $COMMIT_DATA | jq -r '.html_url')
+          # 提取提交信息
+          RAW_COMMIT_MSG=$(git log -1 --pretty=format:"%B" 2>/dev/null)
+          COMMIT_SUBJECT_TEMP=$(echo "$RAW_COMMIT_MSG" | sed -n '1p' | sed 's/"/\\"/g')
           
-          # 修复：使用临时文件生成规范的JSON字符串
+          # 判断是否包含扩展名且不含中文
+          HAS_EXTENSION=$(echo "$COMMIT_SUBJECT_TEMP" | grep -E '\..+')
+          HAS_CHINESE=$(echo "$COMMIT_SUBJECT_TEMP" | grep -qP '\p{Han}' && echo "yes" || echo "no")
+          
+          if [ -n "$HAS_EXTENSION" ] && [ "$HAS_CHINESE" = "no" ]; then
+            COMMIT_SUBJECT="无详细主题"
+          else
+            COMMIT_SUBJECT="$COMMIT_SUBJECT_TEMP"
+          fi
+          
+          # 提取提交正文并清理空行
+          COMMIT_BODY=$(echo "$RAW_COMMIT_MSG" | sed -n '2,$p' | sed 's/"/\\"/g' | sed '/^$/d')
+          
+          # 设置环境变量
+          echo "COMMIT_HASH=$COMMIT_HASH" >> $GITHUB_ENV
+          echo "COMMIT_MESSAGE_SUBJECT=$COMMIT_SUBJECT" >> $GITHUB_ENV
+          echo "COMMIT_MESSAGE_BODY=$COMMIT_BODY" >> $GITHUB_ENV
+          echo "BUILDER=Ziayongyao" >> $GITHUB_ENV
+          
+          # 生成发布说明
+          BUILD_TIME=$(date '+%Y-%m-%d %H:%M:%S')
           cat <<EOF > release_body.tmp
-          ### 🚀 最新提交: [$COMMIT_SUBJECT]($COMMIT_URL)
-          
-          **作者**: $COMMIT_AUTHOR  
-          **时间**: $COMMIT_DATE  
-          
-          **提交内容**:  
-          $COMMIT_BODY
-          
-          ---
-          
-          🔧 **自动化构建信息**  
-          - 版本: ${{ env.RELEASE_TAG }}
-          - 构建时间: $(date '+%Y-%m-%d %H:%M:%S %Z')
+          ## 自动构建版本
+          ### 提交详情：${COMMIT_HASH}
+          主题：${COMMIT_SUBJECT}
+          描述: ${COMMIT_BODY:+}${COMMIT_BODY:-无详细描述}
+          构建时间：${BUILD_TIME}
+          构建者：${BUILDER}
+          包含版本: 普通(Android 8.0+),兼容(Android 5.1-7.0)
           EOF
           
-          # 使用sed处理换行符并生成JSON兼容字符串
+          # 转义换行符并设置环境变量
           RELEASE_BODY_JSON=$(sed ':a;N;$!ba;s/\n/\\n/g' release_body.tmp)
           echo "RELEASE_BODY=$RELEASE_BODY_JSON" >> $GITHUB_ENV
-        if: ${{ !env.SKIP_BUILD }}
 
       - name: 创建发布版本
         if: ${{ !env.SKIP_BUILD }}
